@@ -568,7 +568,7 @@ func noiseShapeQuantizerDelDecGeneric(
 		switch shapingLPCOrder {
 		case 24:
 			if nStatesDelayedDecision == maxDelDecStates {
-				warpedARFeedback24States4(psDelDec, arShpQ13Order24, warpQ16i16, &nARQ14ByState)
+				warpedARFeedback24States4Strided(psDelDec, arShpQ13Order24, warpQ16i16, &nARQ14ByState)
 			} else {
 				for k := 0; k < nStatesDelayedDecision; k++ {
 					psDD := &psDelDec[k]
@@ -850,6 +850,15 @@ func noiseShapeQuantizerDelDec24States4Pred16(
 	aQ12Order16 := (*[16]int16)(aQ12)
 	arShpQ13Order24 := (*[24]int16)(arShpQ13)
 	delayedGainQ10 = delayedGainQ10[:decisionDelay:decisionDelay]
+	// The four-state kernel works on a transposed copy of the shaping state:
+	// row j holds tap j of all four states. It is authoritative for this whole
+	// subframe and is written back before returning.
+	ar := &nsq.delDecAR
+	for k := 0; k < maxDelDecStates; k++ {
+		for j := 0; j < maxShapeLpcOrder; j++ {
+			ar.set(k, j, psDelDec[k].sAR2Q14[j])
+		}
+	}
 
 	localSmplBufIdx := *smplBufIdx
 	warpQ16i16 := int32(int16(warpingQ16))
@@ -885,7 +894,13 @@ func noiseShapeQuantizerDelDec24States4Pred16(
 		_ = psDelDec[0].shapeQ14[localSmplBufIdx]
 
 		psLPCIdx := nsqLpcBufLength - 1 + i
-		warpedARFeedback24States4(psDelDec, arShpQ13Order24, warpQ16i16, &nARQ14ByState)
+		for k := 0; k < maxDelDecStates; k++ {
+			ar.diff[k] = int64(psDelDec[k].diffQ14)
+		}
+		warpedARFeedback24States4(ar, arShpQ13Order24, warpQ16i16)
+		for k := 0; k < maxDelDecStates; k++ {
+			nARQ14ByState[k] = ar.out[k]
+		}
 
 		for k := 0; k < maxDelDecStates; k++ {
 			psDD := &psDelDec[k]
@@ -995,6 +1010,9 @@ func noiseShapeQuantizerDelDec24States4Pred16(
 			dst := &psDelDec[rdMaxInd]
 			copy(dst.sLPCQ14[i:nsqLpcBufLength+i], src.sLPCQ14[i:nsqLpcBufLength+i])
 			dst.nsqDelDecStateTail = src.nsqDelDecStateTail
+			for j := 0; j < maxShapeLpcOrder; j++ {
+				ar.set(rdMaxInd, j, ar.get(rdMinInd, j))
+			}
 			psSampleState[rdMaxInd][0] = psSampleState[rdMinInd][1]
 		}
 
@@ -1041,6 +1059,9 @@ func noiseShapeQuantizerDelDec24States4Pred16(
 	for k := 0; k < maxDelDecStates; k++ {
 		psDD := &psDelDec[k]
 		copy(psDD.sLPCQ14[:nsqLpcBufLength], psDD.sLPCQ14[length:length+nsqLpcBufLength])
+		for j := 0; j < maxShapeLpcOrder; j++ {
+			psDD.sAR2Q14[j] = ar.get(k, j)
+		}
 	}
 }
 
@@ -1080,6 +1101,15 @@ func noiseShapeQuantizerDelDecUnvoiced24States4Pred16(
 	aQ12Order16 := (*[16]int16)(aQ12)
 	arShpQ13Order24 := (*[24]int16)(arShpQ13)
 	delayedGainQ10 = delayedGainQ10[:decisionDelay:decisionDelay]
+	// The four-state kernel works on a transposed copy of the shaping state:
+	// row j holds tap j of all four states. It is authoritative for this whole
+	// subframe and is written back before returning.
+	ar := &nsq.delDecAR
+	for k := 0; k < maxDelDecStates; k++ {
+		for j := 0; j < maxShapeLpcOrder; j++ {
+			ar.set(k, j, psDelDec[k].sAR2Q14[j])
+		}
+	}
 
 	localSmplBufIdx := *smplBufIdx
 	warpQ16i16 := int32(int16(warpingQ16))
@@ -1109,7 +1139,13 @@ func noiseShapeQuantizerDelDecUnvoiced24States4Pred16(
 		_ = psDelDec[0].shapeQ14[localSmplBufIdx]
 
 		psLPCIdx := nsqLpcBufLength - 1 + i
-		warpedARFeedback24States4(psDelDec, arShpQ13Order24, warpQ16i16, &nARQ14ByState)
+		for k := 0; k < maxDelDecStates; k++ {
+			ar.diff[k] = int64(psDelDec[k].diffQ14)
+		}
+		warpedARFeedback24States4(ar, arShpQ13Order24, warpQ16i16)
+		for k := 0; k < maxDelDecStates; k++ {
+			nARQ14ByState[k] = ar.out[k]
+		}
 
 		for k := 0; k < maxDelDecStates; k++ {
 			psDD := &psDelDec[k]
@@ -1219,6 +1255,9 @@ func noiseShapeQuantizerDelDecUnvoiced24States4Pred16(
 			dst := &psDelDec[rdMaxInd]
 			copy(dst.sLPCQ14[i:nsqLpcBufLength+i], src.sLPCQ14[i:nsqLpcBufLength+i])
 			dst.nsqDelDecStateTail = src.nsqDelDecStateTail
+			for j := 0; j < maxShapeLpcOrder; j++ {
+				ar.set(rdMaxInd, j, ar.get(rdMinInd, j))
+			}
 			psSampleState[rdMaxInd][0] = psSampleState[rdMinInd][1]
 		}
 
@@ -1265,6 +1304,9 @@ func noiseShapeQuantizerDelDecUnvoiced24States4Pred16(
 	for k := 0; k < maxDelDecStates; k++ {
 		psDD := &psDelDec[k]
 		copy(psDD.sLPCQ14[:nsqLpcBufLength], psDD.sLPCQ14[length:length+nsqLpcBufLength])
+		for j := 0; j < maxShapeLpcOrder; j++ {
+			psDD.sAR2Q14[j] = ar.get(k, j)
+		}
 	}
 }
 

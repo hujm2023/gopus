@@ -3,7 +3,11 @@ package silk
 import (
 	"math/rand"
 	"testing"
+
+	"github.com/hujm2023/gopus/internal/cpufeat"
 )
+
+var benchWarpSink [maxDelDecStates]int32
 
 // refWarpedARFeedback computes warped AR feedback in pure Go (reference).
 func refWarpedARFeedback(sAR []int32, diffQ14 int32, arShpQ13 []int16, warpQ16 int32, order int) int32 {
@@ -129,41 +133,127 @@ func TestWarpedARFeedback24EdgeCases(t *testing.T) {
 	}
 }
 
+func buildWarpAR(states []nsqDelDecState) *nsqWarpAR {
+	ar := new(nsqWarpAR)
+	for k := 0; k < maxDelDecStates; k++ {
+		ar.diff[k] = int64(states[k].diffQ14)
+		for j := 0; j < maxShapeLpcOrder; j++ {
+			ar.set(k, j, states[k].sAR2Q14[j])
+		}
+	}
+	return ar
+}
+
 func TestWarpedARFeedback24States4MatchesScalar(t *testing.T) {
 	rng := rand.New(rand.NewSource(123))
 	for trial := range 1000 {
 		var states [maxDelDecStates]nsqDelDecState
-		var scalar [maxDelDecStates]nsqDelDecState
+		var strided [maxDelDecStates]nsqDelDecState
 		var arShpQ13 [24]int16
 		for k := range maxDelDecStates {
 			states[k].diffQ14 = rng.Int31n(1<<20) - (1 << 19)
-			scalar[k].diffQ14 = states[k].diffQ14
+			strided[k].diffQ14 = states[k].diffQ14
 			for i := range 24 {
 				v := rng.Int31n(1<<20) - (1 << 19)
 				states[k].sAR2Q14[i] = v
-				scalar[k].sAR2Q14[i] = v
+				strided[k].sAR2Q14[i] = v
 			}
 		}
 		for i := range arShpQ13 {
 			arShpQ13[i] = int16(rng.Int31n(1<<13) - (1 << 12))
 		}
 		warpQ16 := rng.Int31n(1<<15) - (1 << 14)
-
-		var got [maxDelDecStates]int32
-		warpedARFeedback24States4(states[:], &arShpQ13, warpQ16, &got)
-
+		ar := buildWarpAR(states[:])
+		warpedARFeedback24States4(ar, &arShpQ13, warpQ16)
+		var want [maxDelDecStates]int32
+		warpedARFeedback24States4Strided(strided[:], &arShpQ13, warpQ16, &want)
+		if ar.out != want {
+			t.Fatalf("trial %d: got %v want %v", trial, ar.out, want)
+		}
 		for k := range maxDelDecStates {
-			want := warpedARFeedback24(&scalar[k].sAR2Q14, scalar[k].diffQ14, &arShpQ13, warpQ16)
-			if got[k] != want {
-				t.Fatalf("trial %d state %d: got %d want %d", trial, k, got[k], want)
-			}
 			for i := range 24 {
-				if states[k].sAR2Q14[i] != scalar[k].sAR2Q14[i] {
-					t.Fatalf("trial %d state %d sAR[%d]: got %d want %d", trial, k, i, states[k].sAR2Q14[i], scalar[k].sAR2Q14[i])
+				if ar.get(k, i) != strided[k].sAR2Q14[i] {
+					t.Fatalf("trial %d state %d sAR[%d] mismatch", trial, k, i)
 				}
 			}
 		}
 	}
+}
+
+func TestWarpedARFeedback24States4Corners(t *testing.T) {
+	vals := []int32{0, 1, -1, 1 << 15, -(1 << 15), 0x7FFFFFFF, -0x80000000, 0x7FFFFF, -0x800000}
+	warps := []int32{0, 1, -1, 0x7FFF, -0x8000, 1 << 14, -(1 << 14)}
+	coefs := []int16{0, 1, -1, 0x7FFF, -0x8000, 1 << 12, -(1 << 12)}
+	for _, w := range warps {
+		for _, cv := range coefs {
+			for _, v := range vals {
+				var states [maxDelDecStates]nsqDelDecState
+				var strided [maxDelDecStates]nsqDelDecState
+				var arShpQ13 [24]int16
+				for k := range maxDelDecStates {
+					states[k].diffQ14 = v
+					strided[k].diffQ14 = v
+					for i := range 24 {
+						states[k].sAR2Q14[i] = v
+						strided[k].sAR2Q14[i] = v
+					}
+				}
+				for i := range arShpQ13 {
+					arShpQ13[i] = cv
+				}
+				ar := buildWarpAR(states[:])
+				warpedARFeedback24States4(ar, &arShpQ13, w)
+				var want [maxDelDecStates]int32
+				warpedARFeedback24States4Strided(strided[:], &arShpQ13, w, &want)
+				if ar.out != want {
+					t.Fatalf("w=%d c=%d v=%d: got %v want %v", w, cv, v, ar.out, want)
+				}
+				for k := range maxDelDecStates {
+					for i := range 24 {
+						if ar.get(k, i) != strided[k].sAR2Q14[i] {
+							t.Fatalf("w=%d c=%d v=%d state %d sAR[%d] mismatch", w, cv, v, k, i)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// TestWarpedARFeedback24States4Repeat calls the kernel many times on the same
+// state. nsqWarpAR is only 8-byte aligned, so an SSE instruction that requires an
+// aligned memory operand on it would fault here rather than on the first call.
+func TestWarpedARFeedback24States4Repeat(t *testing.T) {
+	var arShpQ13 [24]int16
+	for i := range arShpQ13 {
+		arShpQ13[i] = int16(1000 + i)
+	}
+	ar := new(nsqWarpAR)
+	for k := 0; k < maxDelDecStates; k++ {
+		ar.diff[k] = 4096
+		for j := 0; j < maxShapeLpcOrder; j++ {
+			ar.set(k, j, 12345)
+		}
+	}
+	for i := 0; i < 100000; i++ {
+		warpedARFeedback24States4(ar, &arShpQ13, 16384)
+	}
+	if ar.out[0] == 0 {
+		t.Fatalf("kernel produced no output")
+	}
+}
+
+func TestWarpedARFeedback24States4StackState(t *testing.T) {
+	if !cpufeat.AMD64.HasSSE41 {
+		t.Skip("scalar path has no such constraint")
+	}
+	var stackAR nsqWarpAR
+	var arShpQ13 [24]int16
+	heapAR := new(nsqWarpAR)
+	warpedARFeedback24States4(heapAR, &arShpQ13, 0)
+	t.Log("heap-resident transposed state: ok")
+	warpedARFeedback24States4(&stackAR, &arShpQ13, 0)
+	t.Log("stack-resident transposed state: ok")
 }
 
 func TestWarpedARFeedback20States3MatchesScalar(t *testing.T) {
@@ -235,11 +325,34 @@ func BenchmarkWarpedARFeedback24States4(b *testing.B) {
 		arShpQ13[i] = int16(rng.Int31())
 	}
 	warpQ16 := int32(rng.Int31n(1 << 15))
-	var out [maxDelDecStates]int32
+	ar := buildWarpAR(states[:])
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		warpedARFeedback24States4(states[:], &arShpQ13, warpQ16, &out)
+		warpedARFeedback24States4(ar, &arShpQ13, warpQ16)
 	}
+	benchWarpSink = ar.out
+}
+
+func BenchmarkWarpedARFeedback24States4Strided(b *testing.B) {
+	rng := rand.New(rand.NewSource(1))
+	var states [maxDelDecStates]nsqDelDecState
+	var arShpQ13 [24]int16
+	for k := range states {
+		states[k].diffQ14 = rng.Int31()
+		for i := range states[k].sAR2Q14 {
+			states[k].sAR2Q14[i] = rng.Int31()
+		}
+	}
+	for i := range arShpQ13 {
+		arShpQ13[i] = int16(rng.Int31())
+	}
+	warpQ16 := int32(rng.Int31n(1 << 15))
+	var sink [maxDelDecStates]int32
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		warpedARFeedback24States4Strided(states[:], &arShpQ13, warpQ16, &sink)
+	}
+	benchWarpSink = sink
 }
 
 func BenchmarkWarpedARFeedback20States3(b *testing.B) {

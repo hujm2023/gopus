@@ -33,6 +33,11 @@ type NSQState struct {
 	// AR noise shaping state (Q14)
 	sAR2Q14 [maxShapeLpcOrder]int32
 
+	// Transposed warped AR shaping state of the delayed-decision states, used
+	// only inside the four-state specializations; see nsqWarpAR. It is scratch:
+	// the committed state stays in sAR2Q14.
+	delDecAR nsqWarpAR
+
 	// Low-frequency AR shaping state (Q14)
 	sLFARShpQ14 int32
 

@@ -1,5 +1,29 @@
 package silk
 
+// nsqWarpAR carries the transposed warped AR shaping state of the delayed-decision
+// states used by the four-state specializations, plus the per-call scratch the
+// kernel reads and writes.
+//
+// state[j][k] is tap j of state k. Transposing is what lets one SSE4.1 register
+// carry a tap index across all four states, which is the only parallelism this
+// recurrence has. Only the low 32 bits of a slot carry the int32 state value: the
+// kernel leaves bits 48..63 of a product in the high half, so every access must go
+// through get/set and reading a slot directly as an int64 is not meaningful.
+//
+// The struct has 8-byte alignment, so nothing may use an SSE instruction that
+// requires an aligned memory operand on state; see nsq_warp4_amd64.s.
+type nsqWarpAR struct {
+	state [maxShapeLpcOrder][maxDelDecStates]int64
+	// diff holds the input diff_Q14 of each state, filled by the caller.
+	diff [maxDelDecStates]int64
+	// out receives the resulting n_AR_Q14 of each state.
+	out [maxDelDecStates]int32
+}
+
+func (a *nsqWarpAR) get(k, j int) int32 { return int32(a.state[j][k]) }
+
+func (a *nsqWarpAR) set(k, j int, v int32) { a.state[j][k] = int64(v) }
+
 // warpedARFeedback24 computes 24-tap warped AR noise shaping feedback.
 // Sequential dependencies prevent SIMD parallelism.
 func warpedARFeedback24(sAR2Q14 *[maxShapeLpcOrder]int32, diffQ14 int32, arShpQ13 *[24]int16, warpQ16 int32) int32 {
@@ -96,10 +120,35 @@ func warpedARFeedback24(sAR2Q14 *[maxShapeLpcOrder]int32, diffQ14 int32, arShpQ1
 	return acc
 }
 
-// warpedARFeedback24States4 computes the 24-tap warped AR feedback for the
+// warpedARFeedback24States4Go computes the 24-tap warped AR feedback for the four
+// delayed-decision states used at libopus complexity >= 8, reading and writing the
+// transposed state and filling ar.out. Each state's arithmetic order matches
+// warpedARFeedback24; the states are only interleaved.
+func warpedARFeedback24States4Go(ar *nsqWarpAR, c *[24]int16, w int32) {
+	wi := int64(w)
+	for k := 0; k < maxDelDecStates; k++ {
+		t2 := int32(ar.diff[k]) + int32((int64(ar.get(k, 0))*wi)>>16)
+		t1 := ar.get(k, 0) + int32((int64(ar.get(k, 1)-t2)*wi)>>16)
+		ar.set(k, 0, t2)
+		acc := int32(12) + int32((int64(t2)*int64(c[0]))>>16)
+		for j := 2; j < 24; j += 2 {
+			t2 = ar.get(k, j-1) + int32((int64(ar.get(k, j)-t1)*wi)>>16)
+			ar.set(k, j-1, t1)
+			acc += int32((int64(t1) * int64(c[j-1])) >> 16)
+			t1 = ar.get(k, j) + int32((int64(ar.get(k, j+1)-t2)*wi)>>16)
+			ar.set(k, j, t2)
+			acc += int32((int64(t2) * int64(c[j])) >> 16)
+		}
+		ar.set(k, 23, t1)
+		acc += int32((int64(t1) * int64(c[23])) >> 16)
+		ar.out[k] = acc
+	}
+}
+
+// warpedARFeedback24States4Strided computes the 24-tap warped AR feedback for the
 // four delayed-decision states used at libopus complexity >= 8. Each state's
 // arithmetic order matches warpedARFeedback24; the states are only interleaved.
-func warpedARFeedback24States4(psDelDec []nsqDelDecState, arShpQ13 *[24]int16, warpQ16 int32, out *[maxDelDecStates]int32) {
+func warpedARFeedback24States4Strided(psDelDec []nsqDelDecState, arShpQ13 *[24]int16, warpQ16 int32, out *[maxDelDecStates]int32) {
 	_ = psDelDec[3]
 	s0 := &psDelDec[0].sAR2Q14
 	s1 := &psDelDec[1].sAR2Q14
