@@ -26,7 +26,7 @@ func shortTermPrediction16(sLPCQ14 []int32, idx int, aQ12 []int16) int32 {
 	return out
 }
 
-func shortTermPrediction16State(sLPCQ14 *[maxSubFrameLength + nsqLpcBufLength]int32, idx int, aQ12 *[16]int16) int32 {
+func shortTermPrediction16StateGo(sLPCQ14 *[maxSubFrameLength + nsqLpcBufLength]int32, idx int, aQ12 *[16]int16) int32 {
 	lpc := sLPCQ14[idx-15 : idx+1 : idx+1]
 	// Four independent accumulator chains break the serial SMLAWB dependency so
 	// the out-of-order pipeline can issue the per-tap products in parallel.
