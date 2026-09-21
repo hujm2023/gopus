@@ -17,7 +17,7 @@
 //
 // States are read in ascending memory order from &sLPCQ14[idx-15], so the
 // coefficients are reversed to pair ascending states with descending indices.
-TEXT ·shortTermPrediction16StateSSE41(SB), NOSPLIT, $0-32
+TEXT ·shortTermPrediction16StateSSE41(SB), NOSPLIT, $0-28
 	MOVQ sLPCQ14+0(FP), SI
 	MOVQ idx+8(FP), R8
 	MOVQ aQ12+16(FP), R9
