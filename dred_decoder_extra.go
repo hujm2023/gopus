@@ -5,9 +5,9 @@ package gopus
 import (
 	"errors"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	"github.com/thesyncim/gopus/internal/dred/rdovae"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	"github.com/hujm2023/gopus/internal/dred/rdovae"
 )
 
 // ErrDREDModelNotLoaded reports that the tag-gated standalone DRED

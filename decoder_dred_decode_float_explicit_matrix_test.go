@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestDecoderExplicitDREDDecode16kFrameSizeMatrixMatchesLibopus(t *testing.T) {

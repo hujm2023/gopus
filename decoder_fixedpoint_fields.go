@@ -2,7 +2,7 @@
 
 package gopus
 
-import "github.com/thesyncim/gopus/internal/fixedpoint"
+import "github.com/hujm2023/gopus/internal/fixedpoint"
 
 // decoderFixedFields carries the FIXED_POINT integer CELT decoder used by the
 // gopus_fixed_point build to produce integer-exact CELT-only output through the

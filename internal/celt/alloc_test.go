@@ -3,7 +3,7 @@ package celt
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 // TestComputeAllocationBudget verifies bit allocation respects total budget.

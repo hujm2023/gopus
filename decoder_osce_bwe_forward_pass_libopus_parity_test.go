@@ -7,9 +7,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	osceBWE "github.com/thesyncim/gopus/internal/osce/bwe"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	osceBWE "github.com/hujm2023/gopus/internal/osce/bwe"
 )
 
 // TestOSCEBWEForwardPassMatchesLibopusNumericalParity is the sentinel parity probe

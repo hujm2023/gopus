@@ -65,8 +65,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/testsignal"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/testsignal"
 )
 
 // sub48NativeRates is the native sub-48k SILK/Hybrid sample-rate set under test.

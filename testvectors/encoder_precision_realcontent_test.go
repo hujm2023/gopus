@@ -33,8 +33,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/types"
 )
 
 // precisionGuardSignalName labels the real-content source in logs.

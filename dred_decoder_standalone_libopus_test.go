@@ -5,8 +5,8 @@ package gopus
 import (
 	"testing"
 
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestDREDDecoderParseAndProcessRetainsMetadata(t *testing.T) {

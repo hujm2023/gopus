@@ -6,7 +6,7 @@ import (
 	"math"
 	"os"
 
-	"github.com/thesyncim/gopus/internal/testsignal"
+	"github.com/hujm2023/gopus/internal/testsignal"
 )
 
 const defaultEncoderSignalVariant = testsignal.EncoderVariantAMMultisineV1

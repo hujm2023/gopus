@@ -98,7 +98,7 @@ func repoRoot() (string, error) {
 	for {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
 			data, err := os.ReadFile(filepath.Join(dir, "go.mod"))
-			if err == nil && bytes.Contains(data, []byte("module github.com/thesyncim/gopus\n")) {
+			if err == nil && bytes.Contains(data, []byte("module github.com/hujm2023/gopus\n")) {
 				return dir, nil
 			}
 		}

@@ -1,6 +1,6 @@
 package celt
 
-import "github.com/thesyncim/gopus/internal/extsupport"
+import "github.com/hujm2023/gopus/internal/extsupport"
 
 const (
 	combFilterMinPeriod = 15

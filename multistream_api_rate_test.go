@@ -3,8 +3,8 @@ package gopus
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	mspkg "github.com/thesyncim/gopus/multistream"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	mspkg "github.com/hujm2023/gopus/multistream"
 )
 
 var multistreamRefdecodeHelper libopustest.HelperCache

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // libopusPacketParseResult holds all oracle outputs for one packet test case.

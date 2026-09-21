@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustooling"
+	"github.com/hujm2023/gopus/internal/libopustooling"
 )
 
 func TestFixtureGeneratorScriptsBuildIgnore(t *testing.T) {

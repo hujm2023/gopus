@@ -7,8 +7,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // celtTestSignal builds a deterministic float32 [-1,1) signal of n samples that

@@ -18,7 +18,7 @@ package lace
 import (
 	"errors"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/dnnblob"
 )
 
 // errInvalidLACEModel is returned by Load when the supplied blob does not

@@ -3,8 +3,8 @@
 package gopus
 
 import (
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	osceLACE "github.com/thesyncim/gopus/internal/osce/lace"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	osceLACE "github.com/hujm2023/gopus/internal/osce/lace"
 )
 
 // bindOSCELACEModel attaches (or detaches) the extra-control libopus OSCE

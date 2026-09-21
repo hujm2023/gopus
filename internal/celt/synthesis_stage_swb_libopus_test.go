@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // seedCELTMonoSWBPacketHex is a clean single-frame 20 ms superwideband mono

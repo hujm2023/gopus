@@ -2,7 +2,7 @@
 
 package gopus
 
-import internaldred "github.com/thesyncim/gopus/internal/dred"
+import internaldred "github.com/hujm2023/gopus/internal/dred"
 
 // packetPaddingRegion mirrors the subset of opus_packet_parse_impl() that
 // DRED payload discovery needs: the TOC-derived 48 kHz frame size, frame

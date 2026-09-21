@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	"github.com/thesyncim/gopus/internal/dred/rdovae"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/lpcnetplc"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	"github.com/hujm2023/gopus/internal/dred/rdovae"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/lpcnetplc"
 )
 
 func TestDREDBitsTableMatchesLibopusReference(t *testing.T) {

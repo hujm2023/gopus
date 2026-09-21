@@ -19,7 +19,7 @@ while IFS= read -r pkg; do
     continue
   fi
   case "${pkg}" in
-    github.com/thesyncim/gopus/tmp_check|github.com/thesyncim/gopus/tmp_check/*)
+    github.com/hujm2023/gopus/tmp_check|github.com/hujm2023/gopus/tmp_check/*)
       continue
       ;;
   esac

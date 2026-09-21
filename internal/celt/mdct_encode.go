@@ -6,7 +6,7 @@ package celt
 import (
 	"math"
 
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 func mdctMul(a, b float32) float32 {

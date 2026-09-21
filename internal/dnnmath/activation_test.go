@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestExpApproxMatchesLibopusScalarBits(t *testing.T) {

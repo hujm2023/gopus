@@ -1,6 +1,6 @@
 package celt
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 // celtExp2 approximates exp2(x) using libopus FLOAT_APPROX polynomial.
 // This matches tmp_check/opus-1.6.1/celt/mathops.h (float path).

@@ -3,8 +3,8 @@
 package encoder
 
 import (
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	"github.com/thesyncim/gopus/internal/extsupport"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	"github.com/hujm2023/gopus/internal/extsupport"
 )
 
 func (e *Encoder) currentDREDActivity(pcm []opusRes) bool {

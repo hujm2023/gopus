@@ -1,6 +1,6 @@
 package dred
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // Parsed is the low-cost libopus-shaped DRED parse result retained before any
 // model-backed processing stage.

@@ -3,8 +3,8 @@
 package gopus
 
 import (
-	osceBWE "github.com/thesyncim/gopus/internal/osce/bwe"
-	"github.com/thesyncim/gopus/internal/silk"
+	osceBWE "github.com/hujm2023/gopus/internal/osce/bwe"
+	"github.com/hujm2023/gopus/internal/silk"
 )
 
 // maybeApplyOSCEBWEPostSilk runs the OSCE BWE 16 kHz -> 48 kHz forward pass on

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dred/rdovae"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/dred/rdovae"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestDREDConstantsMatchLibopusReference(t *testing.T) {

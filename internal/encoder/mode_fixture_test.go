@@ -10,8 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/testsignal"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/testsignal"
+	"github.com/hujm2023/gopus/types"
 )
 
 const modeFixturePath = "testdata/libopus_mode_fixture.json"

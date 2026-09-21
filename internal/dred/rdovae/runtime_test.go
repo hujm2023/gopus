@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/dnnmath"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/dnnmath"
 )
 
 func TestDecodeAllZeroModelOutputsZeroFeatures(t *testing.T) {

@@ -7,7 +7,7 @@
 
 package silk
 
-import "github.com/thesyncim/gopus/internal/plc"
+import "github.com/hujm2023/gopus/internal/plc"
 
 // ensureSILKPLCState lazily creates and returns the per-channel SILK PLC state,
 // or nil for an out-of-range channel. Mirrors the per-channel sPLC member of

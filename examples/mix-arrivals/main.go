@@ -12,8 +12,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/container/ogg"
+	"github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/container/ogg"
 )
 
 const (

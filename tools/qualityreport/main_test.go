@@ -15,7 +15,7 @@ func TestParseCurrentCompatOutput(t *testing.T) {
 		`{"Action":"output","Test":"TestDecoderHybridToCELT10msTransitionParity/hybrid-fb-10ms-stereo-24k","Output":"    decoder_transition_parity_test.go:107: transition frame=42 q=99.76 corr=1.000000 meanAbs=0.0 maxAbs=0.0\n"}`,
 		`{"Action":"output","Test":"TestDecoderHybridToCELT10msTransitionParity/hybrid-fb-10ms-stereo-24k","Output":"    decoder_transition_parity_test.go:118: next frame=43 q=100.00 corr=1.000000 meanAbs=0.0 maxAbs=0.0\n"}`,
 		`{"Action":"pass","Test":"TestDecoderHybridToCELT10msTransitionParity/hybrid-fb-10ms-stereo-24k"}`,
-		`{"Action":"pass","Package":"github.com/thesyncim/gopus/testvectors"}`,
+		`{"Action":"pass","Package":"github.com/hujm2023/gopus/testvectors"}`,
 		"",
 	}, "\n"))
 

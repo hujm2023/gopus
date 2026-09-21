@@ -12,7 +12,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/types"
 )
 
 // TestDecideDTXMode_ExactLibopusParity exercises the decide_dtx_mode logic from

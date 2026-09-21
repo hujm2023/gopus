@@ -3,7 +3,7 @@
 package gopus
 
 import (
-	"github.com/thesyncim/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/dnnblob"
 )
 
 type decoderDREDState struct{}

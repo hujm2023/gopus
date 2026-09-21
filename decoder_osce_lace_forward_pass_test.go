@@ -6,8 +6,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	osceLACE "github.com/thesyncim/gopus/internal/osce/lace"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	osceLACE "github.com/hujm2023/gopus/internal/osce/lace"
 )
 
 // TestOSCELACEForwardPassSmoke is the Phase 2a structural smoke test for the

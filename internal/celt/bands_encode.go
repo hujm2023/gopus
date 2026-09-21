@@ -3,7 +3,7 @@
 
 package celt
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 // NormalizeBands divides each band's MDCT coefficients by its energy,
 // producing unit-norm shapes ready for PVQ quantization.

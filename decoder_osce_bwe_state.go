@@ -3,7 +3,7 @@
 package gopus
 
 import (
-	osceBWE "github.com/thesyncim/gopus/internal/osce/bwe"
+	osceBWE "github.com/hujm2023/gopus/internal/osce/bwe"
 )
 
 // OSCE extended-mode values mirror the libopus dnn/osce.h OSCE_MODE_* enum that

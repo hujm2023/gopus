@@ -40,8 +40,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/benchutil"
+	"github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/benchutil"
 )
 
 // rfcConformanceRate is the rate the official vectors are decoded and compared

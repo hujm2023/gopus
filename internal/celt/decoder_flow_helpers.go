@@ -1,8 +1,8 @@
 package celt
 
 import (
-	"github.com/thesyncim/gopus/internal/extsupport"
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 func denormalizeBandsPackedDownsampleIntoFloat32(dst []float32, src []celtNorm, energies []celtGLog, start, end, lm int, edges []int, downsample int) {

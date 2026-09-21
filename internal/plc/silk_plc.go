@@ -19,7 +19,7 @@ import (
 	"math"
 	"math/bits"
 
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 // Constants from libopus silk/PLC.h and silk/define.h, governing the SILK

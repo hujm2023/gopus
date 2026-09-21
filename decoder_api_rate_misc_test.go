@@ -3,7 +3,7 @@ package gopus
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestDecodeSILKUsesAPIRatePacketDuration(t *testing.T) {

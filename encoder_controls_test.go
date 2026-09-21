@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus/internal/extsupport"
 )
 
 func TestEncoder_SetBitrate(t *testing.T) {

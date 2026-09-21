@@ -6,10 +6,10 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	"github.com/thesyncim/gopus/internal/dred/rdovae"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	"github.com/hujm2023/gopus/internal/dred/rdovae"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestStandaloneDREDProcessMatchesLibopusOnRealPacket(t *testing.T) {

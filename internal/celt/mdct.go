@@ -3,7 +3,7 @@ package celt
 import (
 	"math"
 
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 // IMDCT (Inverse Modified Discrete Cosine Transform) implementation for CELT.

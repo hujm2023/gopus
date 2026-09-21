@@ -1,6 +1,6 @@
 package celt
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 type preparedDecodeFrame struct {
 	rd          *rangecoding.Decoder

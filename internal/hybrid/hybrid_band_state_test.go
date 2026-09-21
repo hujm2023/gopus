@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/testvectors"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/testvectors"
 )
 
 // TestHybridStartEndBandState validates that hybrid decoding clears CELT energy

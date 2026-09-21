@@ -1,8 +1,8 @@
 package gopus
 
 import (
-	"github.com/thesyncim/gopus/internal/extsupport"
-	"github.com/thesyncim/gopus/internal/silk"
+	"github.com/hujm2023/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus/internal/silk"
 )
 
 // Decode decodes an Opus packet into float32 PCM samples.

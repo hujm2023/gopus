@@ -6,8 +6,8 @@ import (
 	"bytes"
 	"testing"
 
-	encpkg "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	encpkg "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestEncoderCarriedDREDPayloadMatchesLibopusCELTFullband20msStereo(t *testing.T) {

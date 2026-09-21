@@ -5,7 +5,7 @@ package encoder
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func libopusFloat2Int16ForEncoderTest(t *testing.T, samples []float32) []int16 {

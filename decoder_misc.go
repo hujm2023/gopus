@@ -1,6 +1,6 @@
 package gopus
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 func packetFrameCount(data []byte) (TOC, int, error) {
 	if len(data) < 1 {

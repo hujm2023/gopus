@@ -6,8 +6,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/plc"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/plc"
+	"github.com/hujm2023/gopus/types"
 )
 
 type streamDecoderStub struct {

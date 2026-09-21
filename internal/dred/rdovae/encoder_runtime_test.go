@@ -3,7 +3,7 @@ package rdovae
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/dnnblob"
 )
 
 func TestEncodeDFrameZeroModelOutputsZeroLatentsAndState(t *testing.T) {

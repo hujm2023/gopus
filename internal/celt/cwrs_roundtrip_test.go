@@ -5,7 +5,7 @@ package celt
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 // TestCWRSRoundtripWithRangeCoding tests the full CWRS encode/decode path

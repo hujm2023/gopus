@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/extsupport"
 )
 
 func mustReadDocForTest(t *testing.T, path string) string {

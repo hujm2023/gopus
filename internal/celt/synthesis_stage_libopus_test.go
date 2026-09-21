@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // seedCELTStereoPacket is the exact Opus packet produced by the root-package

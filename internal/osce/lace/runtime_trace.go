@@ -2,7 +2,7 @@
 
 package lace
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 // TraceStage identifies an opt-in LACE diagnostic checkpoint.
 type TraceStage int

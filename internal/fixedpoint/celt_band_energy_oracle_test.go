@@ -5,7 +5,7 @@ package fixedpoint
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // TestCeltSqrt32Oracle checks CeltSqrt32 against the libopus FIXED_POINT

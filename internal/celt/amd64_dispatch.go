@@ -2,7 +2,7 @@
 
 package celt
 
-import "github.com/thesyncim/gopus/internal/cpufeat"
+import "github.com/hujm2023/gopus/internal/cpufeat"
 
 var amd64UseAVX2FMA = cpufeat.AMD64.HasAVX2 && cpufeat.AMD64.HasFMA
 

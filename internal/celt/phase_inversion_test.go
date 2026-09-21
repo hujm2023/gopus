@@ -3,7 +3,7 @@ package celt
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 func encodeThetaInvBit(t *testing.T, disableInv bool) int {

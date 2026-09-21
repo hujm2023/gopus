@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/dnnblob"
 )
 
 func TestLoadDecoder(t *testing.T) {

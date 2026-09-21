@@ -8,7 +8,7 @@ import (
 	"math"
 	"runtime"
 
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 var useNEONApproxActivation = runtime.GOARCH == "arm64"

@@ -12,7 +12,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/thesyncim/gopus/internal/libopustooling"
+	"github.com/hujm2023/gopus/internal/libopustooling"
 )
 
 // OpusDemoPath resolves the pinned libopus reference binary used by parity tooling.

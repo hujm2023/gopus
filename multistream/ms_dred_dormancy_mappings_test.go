@@ -24,9 +24,9 @@ package multistream
 import (
 	"testing"
 
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	internalenc "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/types"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	internalenc "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/types"
 )
 
 // makeMultistreamPacketWithDREDForMappingTest builds a multistream packet for the

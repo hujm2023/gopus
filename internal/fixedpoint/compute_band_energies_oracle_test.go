@@ -5,7 +5,7 @@ package fixedpoint
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // Standard CELT 5ms band layout and per-band log-N table (celt/modes.c

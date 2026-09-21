@@ -23,7 +23,7 @@
 // the prefilter, lift them to a shared celt_pitch.go-style file.
 package fixedpoint
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 const (
 	combFilterMaxPeriod = 1024

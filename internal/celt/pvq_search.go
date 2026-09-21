@@ -1,6 +1,6 @@
 package celt
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // EPSILON is the minimum value used to prevent division by zero and similar issues.
 // This matches libopus celt/mathops.h EPSILON definition.

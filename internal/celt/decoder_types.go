@@ -3,8 +3,8 @@ package celt
 import (
 	"errors"
 
-	"github.com/thesyncim/gopus/internal/plc"
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/plc"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 const (

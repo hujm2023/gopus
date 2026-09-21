@@ -23,8 +23,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/types"
 )
 
 // dtxSeqHelperOnce caches the compiled C oracle binary.

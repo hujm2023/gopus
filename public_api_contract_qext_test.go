@@ -3,7 +3,7 @@
 package gopus_test
 
 import (
-	"github.com/thesyncim/gopus"
+	"github.com/hujm2023/gopus"
 	"reflect"
 	"slices"
 	"testing"

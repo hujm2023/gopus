@@ -6,7 +6,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // encodeFixedModeSwitchSequence encodes a sequence of frames that alternates the

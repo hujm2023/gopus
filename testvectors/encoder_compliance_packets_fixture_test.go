@@ -14,9 +14,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/internal/libopustooling"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/libopustooling"
+	"github.com/hujm2023/gopus/types"
 )
 
 const encoderCompliancePacketsFixturePath = "testdata/encoder_compliance_libopus_packets_fixture.json"

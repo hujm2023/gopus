@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus"
+	"github.com/hujm2023/gopus"
 )
 
 // TestDemosRun exercises both loss-recovery demos end to end, the same way

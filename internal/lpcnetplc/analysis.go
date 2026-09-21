@@ -1,9 +1,9 @@
 package lpcnetplc
 
 import (
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 const (

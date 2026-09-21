@@ -3,8 +3,8 @@
 package fixedpoint
 
 import (
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 // celtEncodeScratch holds the reusable per-frame and per-band working buffers

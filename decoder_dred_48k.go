@@ -2,7 +2,7 @@
 
 package gopus
 
-import "github.com/thesyncim/gopus/internal/lpcnetplc"
+import "github.com/hujm2023/gopus/internal/lpcnetplc"
 
 // applyDREDNeuralConcealment48kMono drives one 48 kHz neural CELT
 // concealment frame. libopus is fundamentally mono DRED (single

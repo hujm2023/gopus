@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/benchutil"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/benchutil"
+	"github.com/hujm2023/gopus/types"
 )
 
 func firstOpusDemoPacket(path string) ([]byte, error) {

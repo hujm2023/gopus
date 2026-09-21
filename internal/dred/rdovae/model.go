@@ -9,7 +9,7 @@
 // bit-for-bit, held in place by the package and decoder DRED parity tests.
 package rdovae
 
-import "github.com/thesyncim/gopus/internal/dnnblob"
+import "github.com/hujm2023/gopus/internal/dnnblob"
 
 // SparseBlockSize is the libopus block-sparse weight tile width
 // (SPARSE_BLOCK_SIZE in dnn/parse_lpcnet_weights.c): block-sparse layers store

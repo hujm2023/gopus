@@ -2,7 +2,7 @@
 
 package silk
 
-import "github.com/thesyncim/gopus/internal/cpufeat"
+import "github.com/hujm2023/gopus/internal/cpufeat"
 
 var silkUsePitchXcorrAVX2FMA = cpufeat.AMD64.HasAVX2 && cpufeat.AMD64.HasFMA
 

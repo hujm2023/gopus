@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/types"
 )
 
 // encodeAllocGuardSine builds a steady tone the encoder can drive through any

@@ -2,7 +2,7 @@
 
 package celt
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // CELTDecodeAllocation holds the per-band bit allocation and side parameters the
 // CELT decoder prologue derives between the spread decision and quant_all_bands.

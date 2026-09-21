@@ -2,7 +2,7 @@
 
 package gopus
 
-import "github.com/thesyncim/gopus/internal/dnnblob"
+import "github.com/hujm2023/gopus/internal/dnnblob"
 
 // bindOSCEBWEModel is a no-op outside of the explicit
 // `gopus_osce` build. The DRED-only build retains

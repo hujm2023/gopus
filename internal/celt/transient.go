@@ -15,7 +15,7 @@
 
 package celt
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 // TransientAnalysisResult holds the results of transient analysis.
 // This provides both the transient decision and the tf_estimate metric.

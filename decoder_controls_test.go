@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus/internal/extsupport"
 )
 
 func TestDecoder_BandwidthAndLastPacketDuration(t *testing.T) {

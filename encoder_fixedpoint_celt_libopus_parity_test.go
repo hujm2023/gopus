@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // armEncodeFloatDriftPublic mirrors the documented darwin/arm64 CELT-encode

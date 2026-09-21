@@ -4,9 +4,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/types"
 )
 
 func TestHybridTransitionFinalRangeIncludesRedundancy(t *testing.T) {

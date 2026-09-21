@@ -29,7 +29,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // projRobustSeed pairs a valid family-3 projection packet with the layout

@@ -6,10 +6,10 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 var libopusAnalysisStagesHelper libopustest.HelperCache

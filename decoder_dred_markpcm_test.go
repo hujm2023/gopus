@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/lpcnetplc"
+	"github.com/hujm2023/gopus/internal/lpcnetplc"
 )
 
 func TestDecoderMarkDREDUpdatedPCMRefreshesNeuralHistory(t *testing.T) {

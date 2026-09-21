@@ -8,7 +8,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 func TestComputeQEXTModeConfig48k(t *testing.T) {

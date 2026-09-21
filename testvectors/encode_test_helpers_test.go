@@ -1,6 +1,6 @@
 package testvectors
 
-import "github.com/thesyncim/gopus/internal/encoder"
+import "github.com/hujm2023/gopus/internal/encoder"
 
 type testFloatPCM interface {
 	~float32 | ~float64

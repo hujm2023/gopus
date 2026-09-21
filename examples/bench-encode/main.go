@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/container/ogg"
-	"github.com/thesyncim/gopus/internal/benchutil"
+	"github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/container/ogg"
+	"github.com/hujm2023/gopus/internal/benchutil"
 )
 
 const sampleRate = 48000

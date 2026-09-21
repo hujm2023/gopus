@@ -8,9 +8,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	osceLACE "github.com/thesyncim/gopus/internal/osce/lace"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	osceLACE "github.com/hujm2023/gopus/internal/osce/lace"
 )
 
 // TestOSCELACEForwardPassMatchesLibopus is the tight numerical parity

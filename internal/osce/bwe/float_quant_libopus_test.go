@@ -5,7 +5,7 @@ package bwe
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestBWEFloatToInt16MatchesLibopusOutputScaleCGrid(t *testing.T) {

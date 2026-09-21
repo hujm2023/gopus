@@ -1,6 +1,6 @@
 package silk
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // silkStereoDecodePred range-decodes the two stereo prediction weights (Q13)
 // for a frame: a joint index selects the coarse quantization cells and two

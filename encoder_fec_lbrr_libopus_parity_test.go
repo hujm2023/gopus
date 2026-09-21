@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func reportPacketByteDiff(t *testing.T, packetIdx int, got, want []byte) {

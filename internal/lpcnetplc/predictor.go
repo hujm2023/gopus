@@ -3,9 +3,9 @@ package lpcnetplc
 import (
 	"runtime"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/dnnmath"
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/dnnmath"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 // Match the pinned libopus DNN kernels selected by the helper build. Linux

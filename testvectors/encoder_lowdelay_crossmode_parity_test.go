@@ -34,9 +34,9 @@ import (
 	"runtime"
 	"testing"
 
-	gopus "github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/types"
+	gopus "github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/types"
 )
 
 // ── oracle wire helpers (reuse vbr_cvbr helpers from encoder_vbr_cvbr_byte_parity_test.go) ─

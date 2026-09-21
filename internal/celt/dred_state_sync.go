@@ -2,7 +2,7 @@
 
 package celt
 
-import "github.com/thesyncim/gopus/internal/plc"
+import "github.com/hujm2023/gopus/internal/plc"
 
 // CommitDRED48kMonoConcealment mirrors the retained CELT-side state updates
 // libopus carries forward after a 48 kHz mono deep-PLC/DRED concealment step.

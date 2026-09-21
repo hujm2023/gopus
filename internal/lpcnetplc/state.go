@@ -13,7 +13,7 @@
 // decoder PLC/DRED parity tests that consume it.
 package lpcnetplc
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 // Constants mirrored from libopus 1.6.1 dnn/lpcnet headers.
 const (

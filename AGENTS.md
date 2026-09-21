@@ -98,7 +98,7 @@ measurement reflects steady state, not one-time lazy init).
   (DRED, OSCE/deep-PLC).
 - `internal/{rangecoding,opusmath,plc,fixedpoint,util}` — shared primitives;
   `internal/libopustest` — the C oracle helper harness.
-- Public packages: root `github.com/thesyncim/gopus`, `multistream`, `types`,
+- Public packages: root `github.com/hujm2023/gopus`, `multistream`, `types`,
   `container/ogg`, `container/red`.
 - `tmp_check/opus-1.6.1/` — pinned libopus reference; `testvectors/` — RFC 8251
   vectors; `tools/` — C oracle/reference sources; `scripts/` — dev tooling.

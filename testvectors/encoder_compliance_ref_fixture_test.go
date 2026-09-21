@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/types"
 )
 
 const encoderComplianceRefQFixturePath = "testdata/encoder_compliance_libopus_ref_q.json"

@@ -6,7 +6,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // hd96kEncodeSine builds an interleaved native 96 kHz sine for the given

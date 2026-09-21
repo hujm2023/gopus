@@ -1,6 +1,6 @@
 package silk
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 // stereo_lp_filter.go implements LP/HP filtering for stereo mid/side channels.
 // This matches libopus silk/stereo_LR_to_MS.c and silk/stereo_MS_to_LR.c.

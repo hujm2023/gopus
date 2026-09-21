@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func haar1ReferenceNorm(x []celtNorm, n0, stride int) {

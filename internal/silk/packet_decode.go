@@ -1,6 +1,6 @@
 package silk
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // frameParams maps a SILK frame duration to the number of 20 ms SILK frames in
 // the packet and the number of 5 ms subframes per frame. A 10 ms frame has one

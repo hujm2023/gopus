@@ -2,7 +2,7 @@
 
 package gopus
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 // osceWindow mirrors the upstream libopus 1.6.1 `osce_window[]` table from
 // dnn/osce_features.c. Only the first 160 entries are needed by

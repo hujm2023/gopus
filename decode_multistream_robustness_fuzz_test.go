@@ -36,7 +36,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // msRobustLayout is one multistream channel configuration exercised by the

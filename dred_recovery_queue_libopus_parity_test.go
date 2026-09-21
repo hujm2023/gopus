@@ -5,9 +5,9 @@ package gopus
 import (
 	"testing"
 
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/lpcnetplc"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/lpcnetplc"
 )
 
 func TestStandaloneDREDRecoveryQueueMatchesLibopus(t *testing.T) {

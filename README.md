@@ -11,7 +11,7 @@ live C oracle (see [Parity & testing](#parity--testing)).
 ## Install
 
 ```sh
-go get github.com/thesyncim/gopus
+go get github.com/hujm2023/gopus
 ```
 
 Requires Go 1.25 or newer.
@@ -34,7 +34,7 @@ package main
 import (
 	"log"
 
-	"github.com/thesyncim/gopus"
+	"github.com/hujm2023/gopus"
 )
 
 func main() {
@@ -116,11 +116,11 @@ and is not importable.
 
 | Package | Use it for |
 | --- | --- |
-| `github.com/thesyncim/gopus` | `Encoder` / `Decoder` (float32 / int16 / int24), streaming `Reader` / `Writer`, multistream and DRED constructors, packet parsing, repacketizer, soft clip, CTLs, error codes |
-| `github.com/thesyncim/gopus/multistream` | Lower-level multistream `Encoder` / `Decoder` and projection / ambisonics (`NewProjectionEncoder` / `NewProjectionDecoder`) |
-| `github.com/thesyncim/gopus/container/ogg` | Read and write Ogg Opus files (RFC 7845) |
-| `github.com/thesyncim/gopus/container/red` | `Encoder` / `Decoder` structs (plus `Build` / `Parse` / `FindRecovery`) to build, parse, and recover RFC 2198 RTP RED payloads |
-| `github.com/thesyncim/gopus/types` | Shared `Mode` / `Bandwidth` / `Signal` enums |
+| `github.com/hujm2023/gopus` | `Encoder` / `Decoder` (float32 / int16 / int24), streaming `Reader` / `Writer`, multistream and DRED constructors, packet parsing, repacketizer, soft clip, CTLs, error codes |
+| `github.com/hujm2023/gopus/multistream` | Lower-level multistream `Encoder` / `Decoder` and projection / ambisonics (`NewProjectionEncoder` / `NewProjectionDecoder`) |
+| `github.com/hujm2023/gopus/container/ogg` | Read and write Ogg Opus files (RFC 7845) |
+| `github.com/hujm2023/gopus/container/red` | `Encoder` / `Decoder` structs (plus `Build` / `Parse` / `FindRecovery`) to build, parse, and recover RFC 2198 RTP RED payloads |
+| `github.com/hujm2023/gopus/types` | Shared `Mode` / `Bandwidth` / `Signal` enums |
 
 Multistream is reachable two ways: `gopus.NewMultistreamEncoder` /
 `gopus.NewMultistreamDecoder` (and the `…Default` constructors for 1–8 channels

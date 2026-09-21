@@ -5,7 +5,7 @@ package multistream
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/silk"
+	"github.com/hujm2023/gopus/internal/silk"
 )
 
 func TestStreamOSCEFloatToInt16MatchesLibopusScaleOutput(t *testing.T) {

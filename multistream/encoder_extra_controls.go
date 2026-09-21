@@ -3,8 +3,8 @@
 package multistream
 
 import (
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	"github.com/thesyncim/gopus/internal/encoder"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	"github.com/hujm2023/gopus/internal/encoder"
 )
 
 // DREDModelLoaded reports whether all stream encoders have a DRED-capable blob.

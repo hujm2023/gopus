@@ -3,9 +3,9 @@ package encoder
 import (
 	"math"
 
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/opusmath"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/types"
 )
 
 // Tonality-analyzer dimensions mirroring the #defines in libopus src/analysis.h.

@@ -70,9 +70,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/testsignal"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/testsignal"
+	"github.com/hujm2023/gopus/types"
 )
 
 // fixedUpsampleForRate is the resampling_factor for each supported API rate.

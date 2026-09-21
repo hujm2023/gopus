@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	encpkg "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/libopustooling"
+	encpkg "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustooling"
 )
 
 const (

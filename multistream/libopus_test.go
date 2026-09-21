@@ -16,8 +16,8 @@ import (
 	"strings"
 	"testing"
 
-	oggcontainer "github.com/thesyncim/gopus/container/ogg"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	oggcontainer "github.com/hujm2023/gopus/container/ogg"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // Ogg CRC-32 lookup table (polynomial 0x04c11db7)

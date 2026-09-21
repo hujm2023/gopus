@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestRDOVAELayerSpecsMatchLibopusReference(t *testing.T) {

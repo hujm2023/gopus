@@ -2,7 +2,7 @@
 
 package gopus
 
-import "github.com/thesyncim/gopus/types"
+import "github.com/hujm2023/gopus/types"
 
 // Mode is an alias for types.Mode representing the Opus coding mode.
 type Mode = types.Mode

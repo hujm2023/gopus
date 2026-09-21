@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/thesyncim/gopus/container/red"
+	"github.com/hujm2023/gopus/container/red"
 )
 
 // opusPT is the Opus RTP payload type used throughout these tests.

@@ -3,7 +3,7 @@ package silk
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 func TestBandwidthConfig(t *testing.T) {

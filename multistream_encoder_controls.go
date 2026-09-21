@@ -1,6 +1,6 @@
 package gopus
 
-import "github.com/thesyncim/gopus/types"
+import "github.com/hujm2023/gopus/types"
 
 // SetFrameSize sets the frame size in native-Fs samples.
 //

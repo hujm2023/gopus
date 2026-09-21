@@ -8,12 +8,12 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/internal/hybrid"
-	"github.com/thesyncim/gopus/internal/rangecoding"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/hybrid"
+	"github.com/hujm2023/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/types"
 )
 
 // Test configuration combinations covering all modes

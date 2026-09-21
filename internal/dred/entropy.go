@@ -1,6 +1,6 @@
 package dred
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 func maxInt(a, b int) int {
 	if a > b {

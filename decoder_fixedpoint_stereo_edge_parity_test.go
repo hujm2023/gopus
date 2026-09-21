@@ -5,7 +5,7 @@ package gopus
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // decodeFixedStereoEdge decodes a step sequence (nil == lost frame) through the

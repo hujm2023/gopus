@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustooling"
+	"github.com/hujm2023/gopus/internal/libopustooling"
 )
 
 // ScalarRefRequested reports whether the libopus reference oracles must link the

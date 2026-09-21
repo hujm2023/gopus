@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus/internal/extsupport"
 )
 
 // TestMultistreamDecoder_Creation tests decoder creation for various channel counts.

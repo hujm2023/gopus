@@ -25,9 +25,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/celt/custom"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/celt/custom"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 var customOracleHelper libopustest.HelperCache

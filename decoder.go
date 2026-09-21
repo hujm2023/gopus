@@ -3,12 +3,12 @@
 package gopus
 
 import (
-	"github.com/thesyncim/gopus/internal/arena"
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/hybrid"
-	"github.com/thesyncim/gopus/internal/rangecoding"
-	"github.com/thesyncim/gopus/internal/silk"
+	"github.com/hujm2023/gopus/internal/arena"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/hybrid"
+	"github.com/hujm2023/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/silk"
 )
 
 const (

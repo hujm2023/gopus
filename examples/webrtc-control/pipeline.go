@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hujm2023/gopus"
 	"github.com/pion/webrtc/v4"
 	"github.com/pion/webrtc/v4/pkg/media"
-	"github.com/thesyncim/gopus"
 )
 
 // pipeline manages the audio encode/decode loop for a single WebRTC session.

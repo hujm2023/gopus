@@ -23,8 +23,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/qualitycompare"
-	"github.com/thesyncim/gopus/internal/testsignal"
+	"github.com/hujm2023/gopus/internal/qualitycompare"
+	"github.com/hujm2023/gopus/internal/testsignal"
 )
 
 // TestCorpusDecoderParity decodes each corpus fixture case with gopus and gates

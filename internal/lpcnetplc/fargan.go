@@ -1,8 +1,8 @@
 package lpcnetplc
 
 import (
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 // FARGAN signal-network dimensions, copied verbatim from libopus 1.6.1

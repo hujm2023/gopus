@@ -21,8 +21,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/thesyncim/gopus/internal/libopustooling"
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/libopustooling"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 var (

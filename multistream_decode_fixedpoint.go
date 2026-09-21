@@ -2,7 +2,7 @@
 
 package gopus
 
-import "github.com/thesyncim/gopus/internal/fixedpoint"
+import "github.com/hujm2023/gopus/internal/fixedpoint"
 
 // fixedDecodeInt16 attempts the FIXED_POINT integer multistream decode for an
 // int16-output packet. It routes each elementary stream through the integer

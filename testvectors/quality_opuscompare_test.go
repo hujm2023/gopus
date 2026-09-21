@@ -3,7 +3,7 @@ package testvectors
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestQualityFloat32ToPCM16UsesOpusRounding(t *testing.T) {

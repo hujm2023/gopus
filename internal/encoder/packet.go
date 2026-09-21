@@ -6,7 +6,7 @@ package encoder
 import (
 	"errors"
 
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/types"
 )
 
 const qextExtensionID = 124

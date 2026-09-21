@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/encoder"
 )
 
 func exportedMethodNames(v any) map[string]struct{} {

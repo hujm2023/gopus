@@ -7,11 +7,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	"github.com/thesyncim/gopus/internal/dred/rdovae"
-	"github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/internal/lpcnetplc"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	"github.com/hujm2023/gopus/internal/dred/rdovae"
+	"github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/lpcnetplc"
 )
 
 func appendTestBlobRecord(dst []byte, name string, typ int32, payloadSize int) []byte {

@@ -5,7 +5,7 @@ package celt
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 var libopusQEXTExtModeHelper libopustest.HelperCache

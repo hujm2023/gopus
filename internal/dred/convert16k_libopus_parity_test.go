@@ -6,7 +6,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestConvertTo16kMonoFloat32MatchesLibopus(t *testing.T) {

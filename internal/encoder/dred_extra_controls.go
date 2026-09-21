@@ -2,7 +2,7 @@
 
 package encoder
 
-import internaldred "github.com/thesyncim/gopus/internal/dred"
+import internaldred "github.com/hujm2023/gopus/internal/dred"
 
 // DREDModelLoaded reports whether the retained blob is DRED-encoder capable.
 func (e *Encoder) DREDModelLoaded() bool {

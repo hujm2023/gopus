@@ -6,8 +6,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	osceBWE "github.com/thesyncim/gopus/internal/osce/bwe"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	osceBWE "github.com/hujm2023/gopus/internal/osce/bwe"
 )
 
 // TestOSCEBWEModelForwardPassMatchesLibopus is the Phase 2a structural smoke

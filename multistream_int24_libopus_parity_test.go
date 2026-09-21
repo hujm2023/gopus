@@ -3,7 +3,7 @@ package gopus
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // libopusRefdecodeMSFormatInt24 selects opus_multistream_decode24() in the

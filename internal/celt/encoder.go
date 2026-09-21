@@ -5,9 +5,9 @@
 package celt
 
 import (
-	"github.com/thesyncim/gopus/internal/arena"
-	"github.com/thesyncim/gopus/internal/extsupport"
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/arena"
+	"github.com/hujm2023/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 const opusBitrateMax = -1

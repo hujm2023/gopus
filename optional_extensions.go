@@ -1,6 +1,6 @@
 package gopus
 
-import "github.com/thesyncim/gopus/internal/extsupport"
+import "github.com/hujm2023/gopus/internal/extsupport"
 
 // OptionalExtension identifies a recognized libopus build-time extension surface.
 type OptionalExtension string

@@ -176,7 +176,7 @@ write_summary() {
     echo "- libopus reference: ${libopus_version}"
     echo "- libopus tarball SHA256: ${libopus_actual_sha}"
     echo "- Expected libopus SHA256: ${libopus_expected_sha}"
-    echo "- Go module: github.com/thesyncim/gopus"
+    echo "- Go module: github.com/hujm2023/gopus"
     echo
     echo "No public release exists until both the signed/tagged Git ref and the GitHub Release are published. This file is evidence for the commit above; it is not a release by itself."
     echo

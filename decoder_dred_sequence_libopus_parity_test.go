@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/lpcnetplc"
-	silkpkg "github.com/thesyncim/gopus/internal/silk"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/lpcnetplc"
+	silkpkg "github.com/hujm2023/gopus/internal/silk"
 )
 
 const (

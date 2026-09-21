@@ -3,11 +3,11 @@
 package gopus
 
 import (
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	"github.com/thesyncim/gopus/internal/dred/rdovae"
-	"github.com/thesyncim/gopus/internal/lpcnetplc"
-	"github.com/thesyncim/gopus/internal/silk"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	"github.com/hujm2023/gopus/internal/dred/rdovae"
+	"github.com/hujm2023/gopus/internal/lpcnetplc"
+	"github.com/hujm2023/gopus/internal/silk"
 )
 
 func (d *Decoder) dredState() *decoderDREDState {

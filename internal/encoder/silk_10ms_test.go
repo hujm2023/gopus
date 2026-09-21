@@ -6,8 +6,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/silk"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/silk"
+	"github.com/hujm2023/gopus/types"
 )
 
 // 10 ms SILK encode diagnostics. These tests drive the encoder in SILK mode at

@@ -1,6 +1,6 @@
 package celt
 
-import "github.com/thesyncim/gopus/internal/extsupport"
+import "github.com/hujm2023/gopus/internal/extsupport"
 
 // handleChannelTransition detects and handles mono-to-stereo channel transitions.
 // When transitioning from mono to stereo, the right channel overlap buffer must be

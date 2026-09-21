@@ -43,7 +43,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // fuzzSeed returns the base RNG seed, overridable via GOPUS_FUZZ_SEED so a

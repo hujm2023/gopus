@@ -29,8 +29,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/multistream"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/multistream"
 )
 
 func hybridStereoFloatBudget() float64 {

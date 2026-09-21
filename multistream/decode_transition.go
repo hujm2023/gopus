@@ -3,9 +3,9 @@ package multistream
 import (
 	"fmt"
 
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/rangecoding"
-	"github.com/thesyncim/gopus/internal/silk"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/silk"
 )
 
 // celtSilenceFrame2B is the all-ones 2-byte CELT frame libopus decodes to let

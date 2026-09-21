@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hujm2023/gopus"
 	"github.com/pion/interceptor"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
-	"github.com/thesyncim/gopus"
 )
 
 type engineConfig struct {

@@ -1,6 +1,6 @@
 package gopus
 
-import "github.com/thesyncim/gopus/multistream"
+import "github.com/hujm2023/gopus/multistream"
 
 func (d *MultistreamDecoder) requestedOutputFrameSize(sampleCount int) (int, error) {
 	channels := int(d.channels)

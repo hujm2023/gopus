@@ -3,11 +3,11 @@
 package encoder
 
 import (
-	"github.com/thesyncim/gopus/internal/extsupport"
-	"github.com/thesyncim/gopus/internal/fixedpoint"
-	"github.com/thesyncim/gopus/internal/opusmath"
-	"github.com/thesyncim/gopus/internal/rangecoding"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus/internal/fixedpoint"
+	"github.com/hujm2023/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/types"
 )
 
 // fixedPointBuild reports whether the gopus_fixed_point integer codec paths are

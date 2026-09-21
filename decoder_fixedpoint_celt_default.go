@@ -2,7 +2,7 @@
 
 package gopus
 
-import "github.com/thesyncim/gopus/internal/celt"
+import "github.com/hujm2023/gopus/internal/celt"
 
 // celtDecodeFixedAPIRate is a no-op in the default (float) build: it never
 // handles the CELT-only decode, so the caller falls through to the float CELT

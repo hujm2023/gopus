@@ -28,8 +28,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	silkpkg "github.com/thesyncim/gopus/internal/silk"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	silkpkg "github.com/hujm2023/gopus/internal/silk"
 )
 
 // TestDecoderCachedCELTDRED16kExplicitMatchesLiveSequenceOracle gates the

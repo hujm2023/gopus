@@ -37,7 +37,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // diffFuzzBudget returns the per-stage iteration budget, shrunk under -short so

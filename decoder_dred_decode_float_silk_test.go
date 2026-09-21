@@ -7,8 +7,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	silkpkg "github.com/thesyncim/gopus/internal/silk"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	silkpkg "github.com/hujm2023/gopus/internal/silk"
 )
 
 func TestDecoderSILKDecodeNilWithCachedDREDLossesMatchLiveLostSequenceOracle(t *testing.T) {

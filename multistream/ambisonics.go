@@ -23,7 +23,7 @@ package multistream
 import (
 	"errors"
 
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 // Errors for ambisonics validation.

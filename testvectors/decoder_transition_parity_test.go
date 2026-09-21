@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	gopus "github.com/thesyncim/gopus"
+	gopus "github.com/hujm2023/gopus"
 )
 
 // transitionFrameComparison scores a single decoded frame (no delay search:

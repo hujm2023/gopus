@@ -6,8 +6,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/lpcnetplc"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/lpcnetplc"
 )
 
 func TestDecoderExplicitDREDWarmup48kStateMatchesLibopus(t *testing.T) {

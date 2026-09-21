@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func probeLibopusCELTFFT(t *testing.T, nfft int, input []complex64) []kissCpx {

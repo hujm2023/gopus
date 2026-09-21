@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 func probeLibopusFloatQuant(mode uint32, samples []float32) ([]int16, error) {

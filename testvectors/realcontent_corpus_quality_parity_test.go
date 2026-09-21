@@ -27,8 +27,8 @@ package testvectors
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/qualitycompare"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/qualitycompare"
 )
 
 // TestRealContentCorpusQualityParity gates gopus-vs-libopus decode parity on real

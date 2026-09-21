@@ -6,8 +6,8 @@ import (
 	"testing"
 	"unsafe"
 
-	encpkg "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/types"
+	encpkg "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/types"
 )
 
 func TestSurroundLogSum32MatchesLibopusApprox(t *testing.T) {

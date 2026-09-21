@@ -4,9 +4,9 @@ import (
 	"math"
 	"testing"
 
-	gopus "github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/types"
+	gopus "github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/types"
 )
 
 // TestNB10msIsolation compares NB-10ms and NB-20ms at the Opus level

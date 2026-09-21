@@ -3,9 +3,9 @@
 package multistream
 
 import (
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	osceBWE "github.com/thesyncim/gopus/internal/osce/bwe"
-	osceLACE "github.com/thesyncim/gopus/internal/osce/lace"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	osceBWE "github.com/hujm2023/gopus/internal/osce/bwe"
+	osceLACE "github.com/hujm2023/gopus/internal/osce/lace"
 )
 
 // setOSCEEnabled stores the per-stream user-toggle bits mirroring libopus

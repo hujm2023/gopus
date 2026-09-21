@@ -1,6 +1,6 @@
 package silk
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // VADFrameState carries per-frame SILK VAD-derived controls.
 // It mirrors the state produced by silk_encode_do_VAD_Fxx in libopus.

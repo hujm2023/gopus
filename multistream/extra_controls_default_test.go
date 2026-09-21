@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/dnnblob"
 )
 
 func exportedMethodNames(v any) map[string]struct{} {

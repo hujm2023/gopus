@@ -1,9 +1,9 @@
 package silk
 
 import (
-	"github.com/thesyncim/gopus/internal/arena"
-	"github.com/thesyncim/gopus/internal/plc"
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/arena"
+	"github.com/hujm2023/gopus/internal/plc"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 // Decoder decodes SILK frames from an Opus packet.

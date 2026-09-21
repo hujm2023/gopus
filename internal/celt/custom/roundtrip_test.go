@@ -6,7 +6,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/celt/custom"
+	"github.com/hujm2023/gopus/internal/celt/custom"
 )
 
 // generateSine generates a sine wave at freqHz, numSamples long, at sampleRate.

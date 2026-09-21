@@ -1,6 +1,6 @@
 package celt
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // Per-mode bit-allocation core for a non-standard Opus Custom mode whose band
 // layout differs from the static 21-band 48 kHz tables. These functions mirror

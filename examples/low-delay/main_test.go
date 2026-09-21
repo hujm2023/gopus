@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus"
+	"github.com/hujm2023/gopus"
 )
 
 // TestLowDelayUsesCELT verifies that the low-delay profile encodes CELT-only

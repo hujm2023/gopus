@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/rangecoding"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/types"
 )
 
 func decodeSilkHeaderBits(t *testing.T, packet []byte) (int, int) {

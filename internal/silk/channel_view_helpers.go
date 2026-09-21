@@ -1,6 +1,6 @@
 package silk
 
-import "github.com/thesyncim/gopus/internal/plc"
+import "github.com/hujm2023/gopus/internal/plc"
 
 func pitchLagFromState(state *plc.SILKPLCState, st *decoderState) int {
 	if state != nil {

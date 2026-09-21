@@ -2,7 +2,7 @@
 
 package multistream
 
-import internaldred "github.com/thesyncim/gopus/internal/dred"
+import internaldred "github.com/hujm2023/gopus/internal/dred"
 
 func findDREDPayload(packet []byte) (payload []byte, frameOffset int, ok bool, err error) {
 	parsed, err := parseOpusPacket(packet, false)

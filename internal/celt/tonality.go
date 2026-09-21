@@ -6,7 +6,7 @@ package celt
 import (
 	"math"
 
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 // tonalityAnalysisResult holds the results of tonality analysis.

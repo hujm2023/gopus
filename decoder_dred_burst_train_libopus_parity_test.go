@@ -30,9 +30,9 @@ import (
 	"fmt"
 	"testing"
 
-	encpkg "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/qualitycompare"
+	encpkg "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/qualitycompare"
 )
 
 // burstTrainConfig controls the burst-train parity test parameters.

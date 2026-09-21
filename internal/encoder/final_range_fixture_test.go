@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/testsignal"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/testsignal"
+	"github.com/hujm2023/gopus/types"
 )
 
 type finalRangeVariantFixtureFile struct {

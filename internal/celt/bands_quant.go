@@ -3,8 +3,8 @@ package celt
 import (
 	"runtime"
 
-	"github.com/thesyncim/gopus/internal/opusmath"
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 const (

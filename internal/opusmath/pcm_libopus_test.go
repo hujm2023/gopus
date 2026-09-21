@@ -3,7 +3,7 @@ package opusmath
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestFloat32ToInt16RawMatchesLibopusSILKFloat2Short(t *testing.T) {

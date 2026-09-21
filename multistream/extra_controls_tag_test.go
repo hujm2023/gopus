@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	encpkg "github.com/thesyncim/gopus/internal/encoder"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	encpkg "github.com/hujm2023/gopus/internal/encoder"
 )
 
 func exportedMethodNames(v any) map[string]struct{} {

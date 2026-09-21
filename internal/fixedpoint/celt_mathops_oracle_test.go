@@ -5,7 +5,7 @@ package fixedpoint
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // scalarOracle runs a single-input FIXED_POINT celt math kernel against the

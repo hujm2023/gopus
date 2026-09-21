@@ -18,7 +18,7 @@ import (
 	"math"
 	"math/bits"
 
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 // VAD Constants matching libopus silk/define.h

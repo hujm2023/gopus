@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/silk"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/silk"
+	"github.com/hujm2023/gopus/types"
 )
 
 func generateSinePCM(frameSize, channels int, frequency float64) []float64 {

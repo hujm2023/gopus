@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/dred/rdovae"
-	encodercore "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/internal/extsupport"
-	"github.com/thesyncim/gopus/internal/lpcnetplc"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/dred/rdovae"
+	encodercore "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus/internal/lpcnetplc"
 )
 
 type optionalEncoderControl interface {

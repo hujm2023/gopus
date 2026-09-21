@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/thesyncim/gopus/internal/libopustooling"
+	"github.com/hujm2023/gopus/internal/libopustooling"
 )
 
 const (

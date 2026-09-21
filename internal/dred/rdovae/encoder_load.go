@@ -3,7 +3,7 @@ package rdovae
 import (
 	"errors"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/dnnblob"
 )
 
 var errInvalidEncoderModel = errors.New("rdovae: invalid encoder model")

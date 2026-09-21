@@ -193,7 +193,7 @@ func TestDefaultBuildIsZeroCostForGatedFeatures(t *testing.T) {
 
 	// Packages that mirror libopus code gated behind a compile flag. None may
 	// appear in the default (untagged) import graph of any public package.
-	const modulePrefix = "github.com/thesyncim/gopus/"
+	const modulePrefix = "github.com/hujm2023/gopus/"
 	gatedPkgs := []string{
 		modulePrefix + "internal/dred",        // ENABLE_DRED (RDOVAE driver)
 		modulePrefix + "internal/dred/rdovae", // ENABLE_DRED neural codec
@@ -251,13 +251,13 @@ func defaultBuildSymbols(t *testing.T) string {
 
 	src := "package main\n\n" +
 		"import (\n" +
-		"\t_ \"github.com/thesyncim/gopus\"\n" +
-		"\t_ \"github.com/thesyncim/gopus/internal/celt\"\n" +
-		"\t_ \"github.com/thesyncim/gopus/internal/encoder\"\n" +
-		"\t_ \"github.com/thesyncim/gopus/internal/hybrid\"\n" +
-		"\t_ \"github.com/thesyncim/gopus/multistream\"\n" +
-		"\t_ \"github.com/thesyncim/gopus/internal/rangecoding\"\n" +
-		"\t_ \"github.com/thesyncim/gopus/internal/silk\"\n" +
+		"\t_ \"github.com/hujm2023/gopus\"\n" +
+		"\t_ \"github.com/hujm2023/gopus/internal/celt\"\n" +
+		"\t_ \"github.com/hujm2023/gopus/internal/encoder\"\n" +
+		"\t_ \"github.com/hujm2023/gopus/internal/hybrid\"\n" +
+		"\t_ \"github.com/hujm2023/gopus/multistream\"\n" +
+		"\t_ \"github.com/hujm2023/gopus/internal/rangecoding\"\n" +
+		"\t_ \"github.com/hujm2023/gopus/internal/silk\"\n" +
 		")\n\n" +
 		"func main() {}\n"
 	if err := os.WriteFile(filepath.Join(probeDir, "main.go"), []byte(src), 0o644); err != nil {
@@ -296,15 +296,15 @@ func TestDefaultBinaryHasNoFixedPointSymbols(t *testing.T) {
 
 	// Substrings that must never appear in a default-build symbol table.
 	forbidden := []string{
-		"github.com/thesyncim/gopus/internal/fixedpoint",
+		"github.com/hujm2023/gopus/internal/fixedpoint",
 		// Package-local shims that live in //go:build gopus_fixed_point files.
-		"github.com/thesyncim/gopus/internal/celt.MaxPulsesBitsExport",
-		"github.com/thesyncim/gopus/internal/celt.DecodeCELTAllocation",
-		"github.com/thesyncim/gopus/internal/celt.TFDecode",
-		"github.com/thesyncim/gopus/internal/rangecoding.(*Decoder).SkipToTell",
-		"github.com/thesyncim/gopus/internal/rangecoding.(*Encoder).SkipToTell",
-		"github.com/thesyncim/gopus/internal/rangecoding.(*Encoder).Snapshot",
-		"github.com/thesyncim/gopus/internal/rangecoding.(*Encoder).Restore",
+		"github.com/hujm2023/gopus/internal/celt.MaxPulsesBitsExport",
+		"github.com/hujm2023/gopus/internal/celt.DecodeCELTAllocation",
+		"github.com/hujm2023/gopus/internal/celt.TFDecode",
+		"github.com/hujm2023/gopus/internal/rangecoding.(*Decoder).SkipToTell",
+		"github.com/hujm2023/gopus/internal/rangecoding.(*Encoder).SkipToTell",
+		"github.com/hujm2023/gopus/internal/rangecoding.(*Encoder).Snapshot",
+		"github.com/hujm2023/gopus/internal/rangecoding.(*Encoder).Restore",
 	}
 	for _, sym := range forbidden {
 		if strings.Contains(syms, sym) {
@@ -327,7 +327,7 @@ func TestDefaultBinaryHasNoGatedFeatureSymbols(t *testing.T) {
 	syms := defaultBuildSymbols(t)
 
 	// Whole gated packages: no symbol from any of these may be linked.
-	const modulePrefix = "github.com/thesyncim/gopus/"
+	const modulePrefix = "github.com/hujm2023/gopus/"
 	forbiddenPkgs := map[string]string{
 		"internal/dred":        "gopus_dred",
 		"internal/dred/rdovae": "gopus_dred",
@@ -354,12 +354,12 @@ func TestDefaultBinaryHasNoGatedFeatureSymbols(t *testing.T) {
 	// and must be dead-code-eliminated / absent from the default link.
 	forbiddenShims := map[string]string{
 		// gopus_qext: native 96 kHz / extension-band CELT shims.
-		"github.com/thesyncim/gopus/internal/celt.(*Decoder).SetQEXTPayload": "gopus_qext",
-		"github.com/thesyncim/gopus/internal/celt.(*Encoder).SetQEXTEnabled": "gopus_qext",
-		"github.com/thesyncim/gopus/internal/celt.(*Encoder).QEXTEnabled":    "gopus_qext",
+		"github.com/hujm2023/gopus/internal/celt.(*Decoder).SetQEXTPayload": "gopus_qext",
+		"github.com/hujm2023/gopus/internal/celt.(*Encoder).SetQEXTEnabled": "gopus_qext",
+		"github.com/hujm2023/gopus/internal/celt.(*Encoder).QEXTEnabled":    "gopus_qext",
 		// gopus_dred / gopus_osce: neural conceal entry points.
-		"github.com/thesyncim/gopus/internal/celt.(*Decoder).ConcealDRED48kToFloat32":      "gopus_dred",
-		"github.com/thesyncim/gopus/internal/celt.(*Decoder).ConcealPLCNeural48kToFloat32": "gopus_osce",
+		"github.com/hujm2023/gopus/internal/celt.(*Decoder).ConcealDRED48kToFloat32":      "gopus_dred",
+		"github.com/hujm2023/gopus/internal/celt.(*Decoder).ConcealPLCNeural48kToFloat32": "gopus_osce",
 	}
 	for sym, tag := range forbiddenShims {
 		if strings.Contains(syms, sym) {

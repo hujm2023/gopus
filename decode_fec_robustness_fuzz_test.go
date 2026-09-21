@@ -28,7 +28,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // fecRobustGopusDecode primes the decoder with one good packet, then runs

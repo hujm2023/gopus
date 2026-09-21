@@ -1,6 +1,6 @@
 package celt
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 var qextLastZeroICDF = []uint8{64, 50, 0}
 var qextLastCapICDF = []uint8{110, 60, 0}

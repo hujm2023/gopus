@@ -3,7 +3,7 @@ package dred
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/lpcnetplc"
+	"github.com/hujm2023/gopus/internal/lpcnetplc"
 )
 
 func TestQueueProcessedFeaturesDoesNotAllocate(t *testing.T) {

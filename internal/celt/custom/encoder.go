@@ -5,7 +5,7 @@ package custom
 import (
 	"errors"
 
-	"github.com/thesyncim/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/celt"
 )
 
 // bitrateMax mirrors libopus OPUS_BITRATE_MAX (celt SetBitrate sentinel for

@@ -7,8 +7,8 @@ import (
 	"math"
 	"testing"
 
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	"github.com/thesyncim/gopus/types"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	"github.com/hujm2023/gopus/types"
 )
 
 func seedDREDPacketRuntimeForQEXTTest(t *testing.T, enc *Encoder) {

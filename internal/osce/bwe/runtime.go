@@ -4,9 +4,9 @@ import (
 	"errors"
 	"math"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/dnnmath"
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/dnnmath"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 // Per-frame and per-subframe dimensions for the libopus 1.6.1 BBWENet

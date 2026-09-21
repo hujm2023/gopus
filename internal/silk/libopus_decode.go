@@ -1,6 +1,6 @@
 package silk
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // silkDecoderSetFs configures the per-channel decoder state for an internal
 // SILK sample rate of fsKHz (8, 12 or 16). It selects the pitch-contour and

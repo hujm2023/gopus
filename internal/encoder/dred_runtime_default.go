@@ -3,8 +3,8 @@
 package encoder
 
 import (
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/types"
 )
 
 type dredEmissionPlan struct {

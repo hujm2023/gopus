@@ -23,9 +23,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/benchutil"
-	internalenc "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/benchutil"
+	internalenc "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/types"
 )
 
 // qextParseExtensionRegion parses a code-3 packet and extracts the QEXT

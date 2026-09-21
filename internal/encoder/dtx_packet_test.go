@@ -3,7 +3,7 @@ package encoder
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/types"
 )
 
 func TestBuildDTXPacketSILK(t *testing.T) {

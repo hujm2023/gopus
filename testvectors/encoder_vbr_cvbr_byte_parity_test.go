@@ -34,10 +34,10 @@ import (
 	"sort"
 	"testing"
 
-	gopus "github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/libopustooling"
-	"github.com/thesyncim/gopus/types"
+	gopus "github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustooling"
+	"github.com/hujm2023/gopus/types"
 )
 
 // ---- libopus OPUS_APPLICATION_* numeric constants (opus_defines.h) ----------

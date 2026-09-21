@@ -1,6 +1,6 @@
 package dred
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 const (
 	// ResamplingOrder mirrors libopus RESAMPLING_ORDER in dred_encoder.h.

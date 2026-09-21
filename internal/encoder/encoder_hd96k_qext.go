@@ -2,7 +2,7 @@
 
 package encoder
 
-import "github.com/thesyncim/gopus/internal/celt"
+import "github.com/hujm2023/gopus/internal/celt"
 
 // Native 96 kHz (Opus HD / QEXT) top-level packet framing.
 //

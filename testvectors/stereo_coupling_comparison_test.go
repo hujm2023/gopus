@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 // TestStereoCouplingVsLibopus compares stereo decoding with libopus per-frame.

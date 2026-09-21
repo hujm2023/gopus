@@ -20,11 +20,11 @@
 package encoder
 
 import (
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/opusmath"
-	"github.com/thesyncim/gopus/internal/rangecoding"
-	"github.com/thesyncim/gopus/internal/silk"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/silk"
+	"github.com/hujm2023/gopus/types"
 )
 
 const (

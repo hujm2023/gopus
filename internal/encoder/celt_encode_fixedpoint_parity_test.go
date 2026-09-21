@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/types"
 )
 
 // TestPublicCELTEncodeFixedByteExact drives the PUBLIC Encoder API in CELT-only

@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 func TestConvertFloat32ToInt16Unit(t *testing.T) {

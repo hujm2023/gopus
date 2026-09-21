@@ -1,7 +1,7 @@
 // Package celt implements the CELT decoder per RFC 6716 Section 4.3.
 package celt
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 func min32(a, b int32) int32 {
 	if a < b {

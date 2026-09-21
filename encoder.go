@@ -3,9 +3,9 @@
 package gopus
 
 import (
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/types"
 )
 
 // Application hints the encoder for optimization.

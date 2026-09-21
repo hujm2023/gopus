@@ -1,6 +1,6 @@
 package celt
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // DecodeStereoParams decodes stereo parameters (intensity and dual stereo).
 // Reference: RFC 6716 Section 4.3.4, libopus celt/celt_decoder.c

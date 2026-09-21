@@ -1,6 +1,6 @@
 package dred
 
-import "github.com/thesyncim/gopus/internal/lpcnetplc"
+import "github.com/hujm2023/gopus/internal/lpcnetplc"
 
 // ProcessedFeatureWindow mirrors the feature scheduling window that
 // opus_decode_native() uses after opus_dred_process(), where the processed

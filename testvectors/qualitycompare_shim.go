@@ -1,6 +1,6 @@
 package testvectors
 
-import "github.com/thesyncim/gopus/internal/qualitycompare"
+import "github.com/hujm2023/gopus/internal/qualitycompare"
 
 // This file re-exports the canonical quality comparator (moved to
 // internal/qualitycompare so the root gopus package tests can use it too) under

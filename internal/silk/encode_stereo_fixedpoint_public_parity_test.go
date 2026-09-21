@@ -8,7 +8,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // TestPublicStereoSILKEncodeFixedByteExact drives the PUBLIC stereo SILK encode

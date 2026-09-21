@@ -5,7 +5,7 @@ package gopus_test
 import (
 	"fmt"
 
-	"github.com/thesyncim/gopus"
+	"github.com/hujm2023/gopus"
 )
 
 // The extra-controls build enables USE_WEIGHTS_FILE model loading (DNN blob)

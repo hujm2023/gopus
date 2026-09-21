@@ -2,7 +2,7 @@
 
 package multistream
 
-import "github.com/thesyncim/gopus/internal/dnnblob"
+import "github.com/hujm2023/gopus/internal/dnnblob"
 
 // setOSCELACEEnabled / setOSCEBWEEnabled / bindOSCEModels are no-ops outside
 // of the explicit `gopus_osce` build. The fanout call sites in

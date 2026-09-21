@@ -1,6 +1,6 @@
 package celt
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // NormalizeBandsToArrayMonoWithBandE normalizes MDCT coefficients for mono
 // and returns the normalized coefficients and linear band amplitudes.

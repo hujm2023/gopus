@@ -7,8 +7,8 @@
 package silk
 
 import (
-	"github.com/thesyncim/gopus/internal/plc"
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/plc"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 // preparePacketRangeDecoder initializes a range decoder over a SILK packet and

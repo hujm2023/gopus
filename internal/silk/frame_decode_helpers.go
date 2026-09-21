@@ -1,6 +1,6 @@
 package silk
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // initFrameDecodeState resets the per-packet decode counters on a channel state
 // and configures it for the packet's frame layout and internal sample rate.

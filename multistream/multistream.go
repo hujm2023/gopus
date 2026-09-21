@@ -8,9 +8,9 @@ package multistream
 import (
 	"fmt"
 
-	"github.com/thesyncim/gopus/internal/extsupport"
-	"github.com/thesyncim/gopus/internal/opusmath"
-	"github.com/thesyncim/gopus/internal/plc"
+	"github.com/hujm2023/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/plc"
 )
 
 // ensureDecodedStreamsScratch returns a reusable [][]float32 header sized to

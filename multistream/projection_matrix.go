@@ -1,6 +1,6 @@
 package multistream
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 func applyProjectionDemixingMatrix32(dst, src []float32, matrix []int16, frame []float32, frameSize, rows, cols int) {
 	frame = frame[:cols]

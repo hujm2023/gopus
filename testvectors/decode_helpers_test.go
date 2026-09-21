@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/thesyncim/gopus"
+	"github.com/hujm2023/gopus"
 )
 
 type decoderScratch struct {

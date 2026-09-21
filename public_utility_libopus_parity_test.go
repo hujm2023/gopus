@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // TestPCMSoftClipMatchesLibopus verifies that the public PCMSoftClip function

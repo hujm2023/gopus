@@ -26,7 +26,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // runDTXOracleCBR runs the C oracle in CBR mode (OPUS_SET_VBR(0)) and returns

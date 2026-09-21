@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus/internal/extsupport"
 )
 
 func TestNewDecoder_ValidParams(t *testing.T) {

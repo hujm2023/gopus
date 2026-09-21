@@ -1,6 +1,6 @@
 package silk
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 type silkCReal = opusmath.CReal
 

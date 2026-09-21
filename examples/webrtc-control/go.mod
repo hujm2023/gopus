@@ -1,10 +1,10 @@
-module github.com/thesyncim/gopus/examples/webrtc-control
+module github.com/hujm2023/gopus/examples/webrtc-control
 
 go 1.25.0
 
 require (
 	github.com/pion/webrtc/v4 v4.0.12
-	github.com/thesyncim/gopus v0.0.0-00010101000000-000000000000
+	github.com/hujm2023/gopus v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -30,4 +30,4 @@ require (
 	golang.org/x/sys v0.30.0 // indirect
 )
 
-replace github.com/thesyncim/gopus => ../..
+replace github.com/hujm2023/gopus => ../..

@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/benchutil"
+	"github.com/hujm2023/gopus/internal/benchutil"
 )
 
 func TestDecodeHybridLibopusQEXTPacketMatchesLibopus(t *testing.T) {

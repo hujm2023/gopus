@@ -3,7 +3,7 @@ package silk
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/util"
+	"github.com/hujm2023/gopus/internal/util"
 )
 
 func TestExcitationOutputLength(t *testing.T) {

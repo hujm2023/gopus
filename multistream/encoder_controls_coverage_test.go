@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	encpkg "github.com/thesyncim/gopus/internal/encoder"
+	encpkg "github.com/hujm2023/gopus/internal/encoder"
 )
 
 // TestEncoderControls_BroadcastRoundTrips covers the multistream Encoder control

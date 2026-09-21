@@ -1,8 +1,8 @@
 package celt
 
 import (
-	"github.com/thesyncim/gopus/internal/extsupport"
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 func (d *Decoder) decodeHybridSpectrum(qextPayload []byte, rd *rangecoding.Decoder, totalBits, frameSize, start, end, lm, shortBlocks, spread, antiCollapseRsv, channels int, disableInv bool, energies []celtGLog, prev1LogE, prev2LogE []celtGLog, pulses, fineQuant, finePriority, tfRes []int32, intensity, dualStereo, balance, codedBands int) (coeffsL, coeffsR []celtNorm, qext *preparedQEXTDecode) {

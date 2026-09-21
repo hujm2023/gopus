@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/thesyncim/gopus"
+	"github.com/hujm2023/gopus"
 )
 
 const antiCollapseFixturePath = "testdata/anticollapse_libopus_fixture.json"

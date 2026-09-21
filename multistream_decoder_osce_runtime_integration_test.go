@@ -22,8 +22,8 @@ import (
 	"math"
 	"testing"
 
-	internalenc "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/types"
+	internalenc "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/types"
 )
 
 func TestMultistreamDecoderOSCEBWELACERuntimeIntegration(t *testing.T) {

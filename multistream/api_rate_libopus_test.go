@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"testing"
 
-	internalenc "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/qualitycompare"
-	"github.com/thesyncim/gopus/types"
+	internalenc "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/qualitycompare"
+	"github.com/hujm2023/gopus/types"
 )
 
 // These tests gate end-to-end decoded gopus multistream audio against a libopus

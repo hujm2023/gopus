@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	internaldred "github.com/thesyncim/gopus/internal/dred"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
 )
 
 func makeTwoFramePacketWithDREDForStandaloneTest(t *testing.T, dredFrameOffset, dredOffset int) []byte {

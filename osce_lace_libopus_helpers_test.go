@@ -5,8 +5,8 @@ package gopus
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // OSCE LACE/NoLACE postfilter is an extra-control libopus feature. The helpers

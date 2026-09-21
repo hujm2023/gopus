@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/thesyncim/gopus/container/red"
+	"github.com/hujm2023/gopus/container/red"
 )
 
 // buildREDPayload constructs an RFC 2198 RED wire payload with the given

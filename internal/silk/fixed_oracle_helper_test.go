@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/thesyncim/gopus/internal/libopustooling"
+	"github.com/hujm2023/gopus/internal/libopustooling"
 )
 
 // fixed_oracle_helper_test.go centralizes the FIXED_POINT libopus oracle build

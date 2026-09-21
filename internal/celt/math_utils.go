@@ -3,7 +3,7 @@ package celt
 import (
 	"math/bits"
 
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 const bitexactThetaMax = 16384

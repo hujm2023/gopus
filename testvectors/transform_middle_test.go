@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/celt"
 )
 
 // TestTransformMiddleRegion verifies MDCT/IMDCT on the middle region only.

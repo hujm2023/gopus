@@ -3,8 +3,8 @@
 package multistream
 
 import (
-	osceBWE "github.com/thesyncim/gopus/internal/osce/bwe"
-	osceLACE "github.com/thesyncim/gopus/internal/osce/lace"
+	osceBWE "github.com/hujm2023/gopus/internal/osce/bwe"
+	osceLACE "github.com/hujm2023/gopus/internal/osce/lace"
 )
 
 // OSCE LACE/NoLACE 20 ms @ 16 kHz frame footprint (mirrors libopus

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestDNNBlobConstantsMatchLibopusReference(t *testing.T) {

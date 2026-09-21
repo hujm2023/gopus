@@ -23,7 +23,7 @@ import (
 	"os/exec"
 	"testing"
 
-	gopus "github.com/thesyncim/gopus"
+	gopus "github.com/hujm2023/gopus"
 )
 
 // ---- seed-stream builders (all prefixed ext to avoid collisions) ----

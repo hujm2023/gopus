@@ -25,11 +25,11 @@ import (
 	"fmt"
 	"testing"
 
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	internalenc "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/qualitycompare"
-	"github.com/thesyncim/gopus/types"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	internalenc "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/qualitycompare"
+	"github.com/hujm2023/gopus/types"
 )
 
 // TestMSPerStreamDREDQueueOnlyTargetStreamAdvances verifies that after a packet

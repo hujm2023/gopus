@@ -6,9 +6,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/container/ogg"
-	"github.com/thesyncim/gopus/container/red"
+	"github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/container/ogg"
+	"github.com/hujm2023/gopus/container/red"
 )
 
 func TestExternalConsumerEncodeDecodeAndOgg(t *testing.T) {

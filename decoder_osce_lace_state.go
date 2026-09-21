@@ -3,7 +3,7 @@
 package gopus
 
 import (
-	osceLACE "github.com/thesyncim/gopus/internal/osce/lace"
+	osceLACE "github.com/hujm2023/gopus/internal/osce/lace"
 )
 
 // decoderOSCELACEState carries decoder-side OSCE LACE/NoLACE runtime

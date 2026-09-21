@@ -52,8 +52,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/testsignal"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/testsignal"
 )
 
 // soakResidualLogCap bounds the per-frame arm64 <=1-ULP residual log lines per

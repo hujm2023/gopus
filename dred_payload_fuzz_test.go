@@ -5,7 +5,7 @@ package gopus
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dred"
+	"github.com/hujm2023/gopus/internal/dred"
 )
 
 func addDREDPayloadFuzzSeed(f *testing.F, extensions []packetExtensionData) {

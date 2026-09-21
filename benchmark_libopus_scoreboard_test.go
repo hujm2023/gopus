@@ -53,9 +53,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/testsignal"
+	"github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/testsignal"
 )
 
 const (

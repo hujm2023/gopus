@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/types"
 )
 
 func TestUpdateOpusVADReusesFreshAnalysis(t *testing.T) {

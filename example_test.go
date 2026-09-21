@@ -5,7 +5,7 @@ import (
 	"log"
 	"math"
 
-	"github.com/thesyncim/gopus"
+	"github.com/hujm2023/gopus"
 )
 
 func ExampleNewEncoder() {

@@ -9,7 +9,7 @@ package plc
 // the spectral envelope of the last good frame while fading out. Hybrid frames
 // conceal only the CELT high bands here; the low band is handled by the SILK
 // path (silk_plc.go), matching the libopus Hybrid layer split.
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 // EnergyDecayPerFrame is the linear factor applied to each band's energy per
 // lost CELT frame so the concealed spectrum fades over consecutive losses.

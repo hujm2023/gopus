@@ -5,8 +5,8 @@ package fixedpoint
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // encodeCELTSequence drives one celt.Encoder over a run of synthetic frames,

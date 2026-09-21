@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/benchutil"
-	"github.com/thesyncim/gopus/internal/celt"
-	internalenc "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/benchutil"
+	"github.com/hujm2023/gopus/internal/celt"
+	internalenc "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/types"
 )
 
 func TestDecodeLibopusQEXTPacketFinalRangeMatchesLibopus(t *testing.T) {

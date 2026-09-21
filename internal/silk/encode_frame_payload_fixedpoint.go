@@ -2,7 +2,7 @@
 
 package silk
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // This file assembles the public FIXED_POINT SILK per-frame encoder
 // (silk/fixed/encode_frame_FIX.c: silk_encode_frame_FIX) on top of the

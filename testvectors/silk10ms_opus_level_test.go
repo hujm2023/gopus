@@ -4,9 +4,9 @@ import (
 	"math"
 	"testing"
 
-	gopus "github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/types"
+	gopus "github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/types"
 )
 
 // TestSILK10msOpusLevel tests SILK 10ms encoding at the Opus level using

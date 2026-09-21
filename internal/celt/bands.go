@@ -1,6 +1,6 @@
 package celt
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 // Band processing orchestration for CELT decoding.
 // This file contains the top-level band decoding loop that processes all

@@ -8,9 +8,9 @@ import (
 	"math"
 	"testing"
 
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	encpkg "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	encpkg "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 var libopusDREDEncoderModelBlobHelper libopustest.HelperCache

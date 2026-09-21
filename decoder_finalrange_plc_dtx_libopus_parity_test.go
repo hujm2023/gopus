@@ -5,7 +5,7 @@ package gopus
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // Frame-by-frame OPUS_GET_FINAL_RANGE parity vs the libopus oracle across

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/testsignal"
+	"github.com/hujm2023/gopus/internal/testsignal"
 )
 
 type variantProvenanceAuditRow struct {

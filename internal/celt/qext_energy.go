@@ -1,8 +1,8 @@
 package celt
 
 import (
-	"github.com/thesyncim/gopus/internal/opusmath"
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 func computeQEXTBandAmplitudesF32Into(mdctCoeffs []float32, cfg *qextModeConfig, end, lm int, bandE []celtEner) {

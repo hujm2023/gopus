@@ -1,4 +1,4 @@
-module github.com/thesyncim/gopus
+module github.com/hujm2023/gopus
 
 go 1.25.0
 

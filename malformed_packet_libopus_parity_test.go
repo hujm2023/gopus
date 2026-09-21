@@ -21,8 +21,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // Libopus raw error codes (opus_defines.h).

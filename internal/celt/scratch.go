@@ -1,8 +1,8 @@
 package celt
 
 import (
-	"github.com/thesyncim/gopus/internal/arena"
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/arena"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 func ensureInt32Slice(buf *[]int32, n int) []int32 {

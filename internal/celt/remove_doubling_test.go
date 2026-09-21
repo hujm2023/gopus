@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/util"
+	"github.com/hujm2023/gopus/internal/util"
 )
 
 func removeDoublingLegacyYYLookup(x []float32, maxPeriod, minPeriod, N int, T0 *int, prevPeriod int, prevGain float32) float32 {

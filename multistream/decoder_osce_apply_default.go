@@ -2,7 +2,7 @@
 
 package multistream
 
-import "github.com/thesyncim/gopus/internal/silk"
+import "github.com/hujm2023/gopus/internal/silk"
 
 // applyOSCEPostSilk is a no-op outside of the explicit
 // `gopus_osce` build. The fanout call site in

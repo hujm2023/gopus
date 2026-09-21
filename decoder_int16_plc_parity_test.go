@@ -32,7 +32,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // plcInt16LossStep is one step in a test sequence: packet==nil means PLC.

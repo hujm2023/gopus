@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/testsignal"
+	"github.com/hujm2023/gopus/internal/testsignal"
 )
 
 const analysisFixturePath = "testdata/libopus_analysis_fixture.json"

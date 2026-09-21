@@ -21,10 +21,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	gopus "github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/internal/silk"
-	"github.com/thesyncim/gopus/types"
+	gopus "github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/silk"
+	"github.com/hujm2023/gopus/types"
 )
 
 const (

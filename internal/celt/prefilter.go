@@ -1,8 +1,8 @@
 package celt
 
 import (
-	"github.com/thesyncim/gopus/internal/opusmath"
-	"github.com/thesyncim/gopus/internal/util"
+	"github.com/hujm2023/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/util"
 )
 
 type prefilterResult struct {

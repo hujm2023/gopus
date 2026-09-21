@@ -1,4 +1,4 @@
-module github.com/thesyncim/gopus/examples/webrtc-dred-loopback
+module github.com/hujm2023/gopus/examples/webrtc-dred-loopback
 
 go 1.25.0
 
@@ -35,7 +35,7 @@ require (
 	github.com/gen2brain/malgo v0.11.25
 	github.com/pion/rtp v1.10.2
 	github.com/pion/webrtc/v4 v4.2.12
-	github.com/thesyncim/gopus v0.0.0-00010101000000-000000000000
+	github.com/hujm2023/gopus v0.0.0-00010101000000-000000000000
 )
 
-replace github.com/thesyncim/gopus => ../..
+replace github.com/hujm2023/gopus => ../..

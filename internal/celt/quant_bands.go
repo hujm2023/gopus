@@ -3,7 +3,7 @@
 
 package celt
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // predCoef contains inter-frame energy prediction coefficients.
 // Index by LM: 0=2.5ms, 1=5ms, 2=10ms, 3=20ms.

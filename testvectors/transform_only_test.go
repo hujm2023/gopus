@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/celt"
 )
 
 // TestTransformOnlyRoundTrip tests MDCT→IMDCT without any encoding/decoding.

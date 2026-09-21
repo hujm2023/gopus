@@ -6,7 +6,7 @@ import (
 	"errors"
 	"math"
 
-	"github.com/thesyncim/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/celt"
 )
 
 // Error values returned by the Custom API.

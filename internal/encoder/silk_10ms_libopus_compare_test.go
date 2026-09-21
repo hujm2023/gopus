@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/types"
 )
 
 const silk10msLibopusDecodedFixturePath = "testdata/silk_10ms_libopus_decoded_fixture.json"

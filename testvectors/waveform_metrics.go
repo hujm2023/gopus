@@ -3,7 +3,7 @@ package testvectors
 import (
 	"math"
 
-	"github.com/thesyncim/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/opusmath"
 )
 
 type waveformStats struct {

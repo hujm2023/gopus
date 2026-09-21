@@ -3,7 +3,7 @@ package lpcnetplc
 import (
 	"errors"
 
-	"github.com/thesyncim/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/dnnblob"
 )
 
 // LPCNet PLC feature-prediction model dimensions, copied verbatim from libopus

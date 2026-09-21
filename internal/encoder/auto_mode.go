@@ -9,8 +9,8 @@ package encoder
 import (
 	"math"
 
-	"github.com/thesyncim/gopus/internal/opusmath"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/types"
 )
 
 // StereoWidthMem holds the running cross-correlation state for the stateful

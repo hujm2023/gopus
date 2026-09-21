@@ -32,8 +32,8 @@ import (
 	"math/rand"
 	"testing"
 
-	internaldred "github.com/thesyncim/gopus/internal/dred"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // dredFuzzSeed pairs a DRED-carrying packet with the DRED-request parameters the

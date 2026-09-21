@@ -1,6 +1,6 @@
 package multistream
 
-import "github.com/thesyncim/gopus/internal/dnnblob"
+import "github.com/hujm2023/gopus/internal/dnnblob"
 
 // SetDNNBlob retains a validated USE_WEIGHTS_FILE blob for future optional
 // extension paths. A nil blob clears the retained main-decoder model state.

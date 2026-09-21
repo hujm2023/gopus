@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/types"
 )
 
 func fillSpeechLikePCM(pcm []float64, startSample, frameSize, channels int, seed *uint32) {

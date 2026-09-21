@@ -7,7 +7,7 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestDREDStatsTablesMatchLibopusReference(t *testing.T) {

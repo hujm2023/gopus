@@ -1,6 +1,6 @@
 package celt
 
-import "github.com/thesyncim/gopus/internal/extsupport"
+import "github.com/hujm2023/gopus/internal/extsupport"
 
 // DecodeFrame decodes a complete CELT frame from raw bytes.
 // If data is nil, empty, or a single byte, performs Packet Loss Concealment (PLC) instead of decoding.

@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 func float64sToNorms(in []float64) []celtNorm {

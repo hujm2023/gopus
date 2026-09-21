@@ -42,13 +42,13 @@ import (
 	"errors"
 	"math"
 
-	"github.com/thesyncim/gopus/internal/arena"
-	"github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/dnnblob"
-	"github.com/thesyncim/gopus/internal/extsupport"
-	"github.com/thesyncim/gopus/internal/opusmath"
-	"github.com/thesyncim/gopus/internal/silk"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/arena"
+	"github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/dnnblob"
+	"github.com/hujm2023/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/silk"
+	"github.com/hujm2023/gopus/types"
 )
 
 // Mode represents the encoding mode.

@@ -47,7 +47,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // fixedPerArchTol is the maximum absolute per-sample integer difference tolerated

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // hd96kPacketLayout decomposes a native 96 kHz CELT-only code-3 Opus packet

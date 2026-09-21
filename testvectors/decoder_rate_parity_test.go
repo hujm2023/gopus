@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/thesyncim/gopus"
+	"github.com/hujm2023/gopus"
 )
 
 // decoderRateParityBar returns the quality bar for a per-rate parity case.

@@ -7,7 +7,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // decodeWithLibopusFixedInt16Gain drives FIXED_POINT opus_decode() with a

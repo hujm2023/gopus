@@ -21,9 +21,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/internal/testsignal"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/testsignal"
+	"github.com/hujm2023/gopus/types"
 )
 
 // celtShortFrameByteParityArm64MaxResidualRate is the maximum fraction of

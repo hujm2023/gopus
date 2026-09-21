@@ -3,7 +3,7 @@ package multistream
 import (
 	"errors"
 
-	"github.com/thesyncim/gopus/internal/arena"
+	"github.com/hujm2023/gopus/internal/arena"
 )
 
 // Errors for multistream packet parsing.

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	encodercore "github.com/thesyncim/gopus/internal/encoder"
-	"github.com/thesyncim/gopus/internal/extsupport"
+	encodercore "github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/extsupport"
 )
 
 // TestMultistreamEncoder_Creation tests encoder creation for various channel counts.

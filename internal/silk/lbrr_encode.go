@@ -6,7 +6,7 @@
 package silk
 
 import (
-	"github.com/thesyncim/gopus/internal/rangecoding"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
 // lbrrSpeechActivityThresholdQ8 is the minimum speech activity for LBRR.

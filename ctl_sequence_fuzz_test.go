@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // libopus CTL request codes (opus_defines.h). Listed here so the fuzz program

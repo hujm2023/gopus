@@ -3,8 +3,8 @@ package gopus
 import (
 	"testing"
 
-	celtpkg "github.com/thesyncim/gopus/internal/celt"
-	"github.com/thesyncim/gopus/internal/libopustest"
+	celtpkg "github.com/hujm2023/gopus/internal/celt"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func TestCELTDecoderAPIRateToFloat32MatchesLibopus(t *testing.T) {

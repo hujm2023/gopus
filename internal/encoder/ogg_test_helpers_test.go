@@ -9,8 +9,8 @@ import (
 	"os/exec"
 	"testing"
 
-	oggcontainer "github.com/thesyncim/gopus/container/ogg"
-	"github.com/thesyncim/gopus/internal/silk"
+	oggcontainer "github.com/hujm2023/gopus/container/ogg"
+	"github.com/hujm2023/gopus/internal/silk"
 )
 
 func writeTestOgg(w *bytes.Buffer, packets [][]byte, channels, sampleRate, frameSize, preSkip int) {

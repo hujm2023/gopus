@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/dnnmath"
+	"github.com/hujm2023/gopus/internal/dnnmath"
 )
 
 func TestUpdateActivityHistory(t *testing.T) {

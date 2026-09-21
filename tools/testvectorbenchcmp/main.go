@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/libopustooling"
-	"github.com/thesyncim/gopus/testvectors"
+	"github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/libopustooling"
+	"github.com/hujm2023/gopus/testvectors"
 )
 
 const (

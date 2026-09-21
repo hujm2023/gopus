@@ -8,8 +8,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/types"
 )
 
 // TestHybridBitAllocation verifies SILK/CELT bit allocation follows libopus tables.

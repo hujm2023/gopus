@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // Decode-side DTX-sequence parity: libopus encodes a speech -> silence -> speech

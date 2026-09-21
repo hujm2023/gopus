@@ -1,6 +1,6 @@
 package gopus
 
-import "github.com/thesyncim/gopus/internal/opusmath"
+import "github.com/hujm2023/gopus/internal/opusmath"
 
 func float32ToInt16(sample float32) int16 {
 	return opusFloatToInt16(sample)

@@ -23,7 +23,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // TestDecodeWithFECMonoFirstPacketLBRRMatchesLibopus checks that the very first

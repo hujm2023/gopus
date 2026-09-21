@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/thesyncim/gopus"
-	"github.com/thesyncim/gopus/internal/extsupport"
+	"github.com/hujm2023/gopus"
+	"github.com/hujm2023/gopus/internal/extsupport"
 )
 
 type finalRangeVector struct {

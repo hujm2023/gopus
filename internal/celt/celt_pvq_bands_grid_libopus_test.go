@@ -38,7 +38,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // pvqGridHelper is the shared HelperCache for the PVQ/bands grid oracle.

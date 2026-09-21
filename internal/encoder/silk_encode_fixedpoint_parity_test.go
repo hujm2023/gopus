@@ -6,7 +6,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/thesyncim/gopus/types"
+	"github.com/hujm2023/gopus/types"
 )
 
 // TestPublicEncoderSILKFixedPathEngaged drives the PUBLIC encoder.Encoder in

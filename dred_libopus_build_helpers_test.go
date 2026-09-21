@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func buildLibopusDREDHelper(sourceFile, outputBase string, includeInternal bool) (string, error) {

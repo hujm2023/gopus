@@ -1,6 +1,6 @@
 package celt
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 func cubicQEXTThresholdQ3(ctx *bandCtx, n, lm int) int {
 	if ctx == nil {

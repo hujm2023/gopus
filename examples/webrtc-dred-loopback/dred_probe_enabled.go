@@ -2,7 +2,7 @@
 
 package main
 
-import "github.com/thesyncim/gopus"
+import "github.com/hujm2023/gopus"
 
 type dredPacketProbe struct {
 	decoder       *gopus.DREDDecoder

@@ -5,7 +5,7 @@ package celt
 import (
 	"testing"
 
-	"github.com/thesyncim/gopus/internal/libopustest"
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 func probeLibopusCELTFloatQuant(t *testing.T, mode uint32, samples []float32) []int16 {

@@ -2,7 +2,7 @@
 
 package celt
 
-import "github.com/thesyncim/gopus/internal/rangecoding"
+import "github.com/hujm2023/gopus/internal/rangecoding"
 
 // BandAllocationProbe captures CELT decode-time band allocation after coarse
 // energy and before spectrum decode. Used by libopus parity tests.

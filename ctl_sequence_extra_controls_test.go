@@ -23,7 +23,7 @@ import (
 	"math/rand"
 	"testing"
 
-	internaldred "github.com/thesyncim/gopus/internal/dred"
+	internaldred "github.com/hujm2023/gopus/internal/dred"
 )
 
 // TestEncoderCTLSequence_DREDDurationFuzz drives seeded DRED-duration SET/GET
