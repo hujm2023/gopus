@@ -858,11 +858,8 @@ func noiseShapeQuantizerDelDec24States4Pred16(
 	tiltQ14i32 := int32(tiltQ14)
 	lfShpQ14i32 := int32(lfShpQ14)
 
-	useRDO := lambdaQ10 > 2048
-	var rdoOffset int32
-	if useRDO {
-		rdoOffset = int32(lambdaQ10/2 - 512)
-	}
+	var batch nsqQuant4
+	var lpcByState, arByState, lfByState [4]int32
 
 	var nARQ14ByState [maxDelDecStates]int32
 	for i := range length {
@@ -892,7 +889,6 @@ func noiseShapeQuantizerDelDec24States4Pred16(
 
 		for k := 0; k < maxDelDecStates; k++ {
 			psDD := &psDelDec[k]
-			psSS := &psSampleState[k]
 
 			psDD.seed = psDD.seed*196314165 + 907633515
 
@@ -915,57 +911,17 @@ func noiseShapeQuantizerDelDec24States4Pred16(
 			rQ10 = (rQ10 ^ seedSign) - seedSign
 			rQ10 = max(-(31 << 10), min(rQ10, 30<<10))
 
-			q1Q10 := rQ10 - offsetQ10i32
-			q1Q0 := q1Q10 >> 10
-			if useRDO {
-				if q1Q10 > rdoOffset {
-					q1Q0 = (q1Q10 - rdoOffset) >> 10
-				} else if q1Q10 < -rdoOffset {
-					q1Q0 = (q1Q10 + rdoOffset) >> 10
-				} else if q1Q10 < 0 {
-					q1Q0 = -1
-				} else {
-					q1Q0 = 0
-				}
-			}
-			var q2Q10, rd1Q10, rd2Q10 int32
-			if q1Q0 > 0 {
-				q1Q10 = (q1Q0 << 10) - quantLevelAdjQ10 + offsetQ10i32
-				q2Q10 = q1Q10 + 1024
-				rd1Q10 = silk_SMULBB(q1Q10, lambdaQ10i32)
-				rd2Q10 = silk_SMULBB(q2Q10, lambdaQ10i32)
-			} else if q1Q0 == 0 {
-				q1Q10 = offsetQ10i32
-				q2Q10 = q1Q10 + 1024 - quantLevelAdjQ10
-				rd1Q10 = silk_SMULBB(q1Q10, lambdaQ10i32)
-				rd2Q10 = silk_SMULBB(q2Q10, lambdaQ10i32)
-			} else if q1Q0 == -1 {
-				q2Q10 = offsetQ10i32
-				q1Q10 = q2Q10 - 1024 + quantLevelAdjQ10
-				rd1Q10 = silk_SMULBB(-q1Q10, lambdaQ10i32)
-				rd2Q10 = silk_SMULBB(q2Q10, lambdaQ10i32)
-			} else {
-				q1Q10 = (q1Q0 << 10) + quantLevelAdjQ10 + offsetQ10i32
-				q2Q10 = q1Q10 + 1024
-				rd1Q10 = silk_SMULBB(-q1Q10, lambdaQ10i32)
-				rd2Q10 = silk_SMULBB(-q2Q10, lambdaQ10i32)
-			}
-			rrQ10 := rQ10 - q1Q10
-			rd1Q10 = silk_SMLABB(rd1Q10, rrQ10, rrQ10) >> 10
-			rrQ10 = rQ10 - q2Q10
-			rd2Q10 = silk_SMLABB(rd2Q10, rrQ10, rrQ10) >> 10
-
-			if rd1Q10 < rd2Q10 {
-				psSS[0].rdQ10 = psDD.rdQ10 + rd1Q10
-				psSS[1].rdQ10 = psDD.rdQ10 + rd2Q10
-				psSS[0].qQ10 = q1Q10
-				psSS[1].qQ10 = q2Q10
-			} else {
-				psSS[0].rdQ10 = psDD.rdQ10 + rd2Q10
-				psSS[1].rdQ10 = psDD.rdQ10 + rd1Q10
-				psSS[0].qQ10 = q2Q10
-				psSS[1].qQ10 = q1Q10
-			}
+			batch.r[k], batch.rd[k] = rQ10, psDD.rdQ10
+			lpcByState[k], arByState[k], lfByState[k] = lpcPredQ14, nARQ14, nLFQ14
+		}
+		quantize4(&batch, offsetQ10i32, lambdaQ10i32)
+		for k := range maxDelDecStates {
+			psDD := &psDelDec[k]
+			psSS := &psSampleState[k]
+			seedSign := psDD.seed >> 31
+			lpcPredQ14, nARQ14, nLFQ14 := lpcByState[k], arByState[k], lfByState[k]
+			psSS[0].qQ10, psSS[1].qQ10 = batch.q0[k], batch.q1[k]
+			psSS[0].rdQ10, psSS[1].rdQ10 = batch.cost0[k], batch.cost1[k]
 
 			excQ14 := psSS[0].qQ10 << 4
 			excQ14 = (excQ14 ^ seedSign) - seedSign
@@ -1132,11 +1088,8 @@ func noiseShapeQuantizerDelDecUnvoiced24States4Pred16(
 	tiltQ14i32 := int32(tiltQ14)
 	lfShpQ14i32 := int32(lfShpQ14)
 
-	useRDO := lambdaQ10 > 2048
-	var rdoOffset int32
-	if useRDO {
-		rdoOffset = int32(lambdaQ10/2 - 512)
-	}
+	var batch nsqQuant4
+	var lpcByState, arByState, lfByState [4]int32
 
 	var nARQ14ByState [maxDelDecStates]int32
 	for i := range length {
@@ -1160,7 +1113,6 @@ func noiseShapeQuantizerDelDecUnvoiced24States4Pred16(
 
 		for k := 0; k < maxDelDecStates; k++ {
 			psDD := &psDelDec[k]
-			psSS := &psSampleState[k]
 
 			psDD.seed = psDD.seed*196314165 + 907633515
 
@@ -1183,57 +1135,17 @@ func noiseShapeQuantizerDelDecUnvoiced24States4Pred16(
 			rQ10 = (rQ10 ^ seedSign) - seedSign
 			rQ10 = max(-(31 << 10), min(rQ10, 30<<10))
 
-			q1Q10 := rQ10 - offsetQ10i32
-			q1Q0 := q1Q10 >> 10
-			if useRDO {
-				if q1Q10 > rdoOffset {
-					q1Q0 = (q1Q10 - rdoOffset) >> 10
-				} else if q1Q10 < -rdoOffset {
-					q1Q0 = (q1Q10 + rdoOffset) >> 10
-				} else if q1Q10 < 0 {
-					q1Q0 = -1
-				} else {
-					q1Q0 = 0
-				}
-			}
-			var q2Q10, rd1Q10, rd2Q10 int32
-			if q1Q0 > 0 {
-				q1Q10 = (q1Q0 << 10) - quantLevelAdjQ10 + offsetQ10i32
-				q2Q10 = q1Q10 + 1024
-				rd1Q10 = silk_SMULBB(q1Q10, lambdaQ10i32)
-				rd2Q10 = silk_SMULBB(q2Q10, lambdaQ10i32)
-			} else if q1Q0 == 0 {
-				q1Q10 = offsetQ10i32
-				q2Q10 = q1Q10 + 1024 - quantLevelAdjQ10
-				rd1Q10 = silk_SMULBB(q1Q10, lambdaQ10i32)
-				rd2Q10 = silk_SMULBB(q2Q10, lambdaQ10i32)
-			} else if q1Q0 == -1 {
-				q2Q10 = offsetQ10i32
-				q1Q10 = q2Q10 - 1024 + quantLevelAdjQ10
-				rd1Q10 = silk_SMULBB(-q1Q10, lambdaQ10i32)
-				rd2Q10 = silk_SMULBB(q2Q10, lambdaQ10i32)
-			} else {
-				q1Q10 = (q1Q0 << 10) + quantLevelAdjQ10 + offsetQ10i32
-				q2Q10 = q1Q10 + 1024
-				rd1Q10 = silk_SMULBB(-q1Q10, lambdaQ10i32)
-				rd2Q10 = silk_SMULBB(-q2Q10, lambdaQ10i32)
-			}
-			rrQ10 := rQ10 - q1Q10
-			rd1Q10 = silk_SMLABB(rd1Q10, rrQ10, rrQ10) >> 10
-			rrQ10 = rQ10 - q2Q10
-			rd2Q10 = silk_SMLABB(rd2Q10, rrQ10, rrQ10) >> 10
-
-			if rd1Q10 < rd2Q10 {
-				psSS[0].rdQ10 = psDD.rdQ10 + rd1Q10
-				psSS[1].rdQ10 = psDD.rdQ10 + rd2Q10
-				psSS[0].qQ10 = q1Q10
-				psSS[1].qQ10 = q2Q10
-			} else {
-				psSS[0].rdQ10 = psDD.rdQ10 + rd2Q10
-				psSS[1].rdQ10 = psDD.rdQ10 + rd1Q10
-				psSS[0].qQ10 = q2Q10
-				psSS[1].qQ10 = q1Q10
-			}
+			batch.r[k], batch.rd[k] = rQ10, psDD.rdQ10
+			lpcByState[k], arByState[k], lfByState[k] = lpcPredQ14, nARQ14, nLFQ14
+		}
+		quantize4(&batch, offsetQ10i32, lambdaQ10i32)
+		for k := range maxDelDecStates {
+			psDD := &psDelDec[k]
+			psSS := &psSampleState[k]
+			seedSign := psDD.seed >> 31
+			lpcPredQ14, nARQ14, nLFQ14 := lpcByState[k], arByState[k], lfByState[k]
+			psSS[0].qQ10, psSS[1].qQ10 = batch.q0[k], batch.q1[k]
+			psSS[0].rdQ10, psSS[1].rdQ10 = batch.cost0[k], batch.cost1[k]
 
 			excQ14 := psSS[0].qQ10 << 4
 			excQ14 = (excQ14 ^ seedSign) - seedSign
