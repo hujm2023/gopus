@@ -416,3 +416,30 @@ func BenchmarkWarpedARFeedback16(b *testing.B) {
 		warpedARFeedback16(&sAR, diffQ14, &arShpQ13, warpQ16)
 	}
 }
+
+func TestWarpedARFeedback24States4Allocs(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		call func(*nsqWarpAR, *[24]int16, int32)
+	}{
+		{"dispatch", warpedARFeedback24States4},
+		{"scalar", warpedARFeedback24States4Go},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ar := new(nsqWarpAR)
+			var coefficients [24]int16
+			for k := range maxDelDecStates {
+				ar.diff[k] = int64(k+1) * 12345
+			}
+			for j := range coefficients {
+				coefficients[j] = int16(j*17 - 200)
+			}
+			tc.call(ar, &coefficients, 16384)
+			if got := testing.AllocsPerRun(1000, func() {
+				tc.call(ar, &coefficients, 16384)
+			}); got != 0 {
+				t.Fatalf("steady-state allocations = %g, want 0", got)
+			}
+		})
+	}
+}
