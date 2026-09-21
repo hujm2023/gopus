@@ -9,6 +9,7 @@
 #endif
 
 #include "config.h"
+#include "celt/cpu_support.h"
 #include "silk/float/main_FLP.h"
 
 #define INPUT_MAGIC "GSLI"
@@ -152,7 +153,13 @@ static int eval_inner_product(void) {
   uint32_t i;
   silk_float a[512];
   silk_float b[512];
-  double v;
+  int arch = opus_select_arch();
+  uint32_t native_avx2 = 0;
+#if defined(OPUS_X86_PRESUME_AVX2)
+  native_avx2 = 1;
+#elif defined(OPUS_HAVE_RTCD) && defined(OPUS_X86_MAY_HAVE_AVX2)
+  native_avx2 = SILK_INNER_PRODUCT_FLP_IMPL[arch & OPUS_ARCHMASK] == silk_inner_product_FLP_avx2;
+#endif
   if (!read_u32(&length)) return 0;
   if (length == 0 || length > 512) return 0;
   for (i = 0; i < length; i++) {
@@ -163,8 +170,9 @@ static int eval_inner_product(void) {
     if (!read_u32(&raw)) return 0;
     memcpy(&b[i], &raw, sizeof(b[i]));
   }
-  v = silk_inner_product_FLP(a, b, (opus_int)length, 0);
-  return write_double(v);
+  return write_u32(native_avx2) &&
+         write_double(silk_inner_product_FLP_c(a, b, (opus_int)length)) &&
+         write_double(silk_inner_product_FLP(a, b, (opus_int)length, arch));
 }
 
 static int eval_energy(void) {

@@ -8,6 +8,10 @@ import (
 	"testing"
 )
 
+func init() {
+	libopusSILKInnerProductUsesAVX2 = silkUseInnerProductFLPAVX2FMA
+}
+
 func innerProductFLPAVX2Reference(a, b []float32, length int) silkCReal {
 	var acc1, acc2 [4]float64
 	i := 0

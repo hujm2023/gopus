@@ -59,6 +59,15 @@ type libopusSILKInnerProductCase struct {
 	b    []float32
 }
 
+// The amd64 assembly test file selects the same lane as the production dispatcher.
+// Pure Go and arm64 preserve the scalar C summation order.
+var libopusSILKInnerProductUsesAVX2 bool
+
+type libopusSILKInnerProductResult struct {
+	scalar, native float64
+	nativeAVX2     bool
+}
+
 type libopusSILKEnergyCase struct {
 	name string
 	x    []float32
@@ -156,7 +165,7 @@ func probeLibopusSILKLPCAnalysisFilter(cases []libopusSILKLPCFilterCase) ([][]fl
 	return out, nil
 }
 
-func probeLibopusSILKInnerProductFLP(cases []libopusSILKInnerProductCase) ([]float64, error) {
+func probeLibopusSILKInnerProductFLP(cases []libopusSILKInnerProductCase) ([]libopusSILKInnerProductResult, error) {
 	binPath, err := getLibopusSILKLPCHelperPath()
 	if err != nil {
 		return nil, err
@@ -176,9 +185,15 @@ func probeLibopusSILKInnerProductFLP(cases []libopusSILKInnerProductCase) ([]flo
 		return nil, err
 	}
 	count := reader.Count(len(cases))
-	out := make([]float64, count)
+	out := make([]libopusSILKInnerProductResult, count)
 	for i := range out {
-		out[i] = reader.Float64()
+		nativeAVX2 := reader.U32()
+		if nativeAVX2 > 1 {
+			return nil, fmt.Errorf("helper native AVX2=%d", nativeAVX2)
+		}
+		out[i].nativeAVX2 = nativeAVX2 == 1
+		out[i].scalar = reader.Float64()
+		out[i].native = reader.Float64()
 	}
 	if err := reader.ExpectConsumed(); err != nil {
 		return nil, err
@@ -357,12 +372,28 @@ func TestSILKInnerProductFLPMatchesLibopusOracle(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := innerProductFLP(tc.a, tc.b, len(tc.a))
-			if math.Float64bits(got) != math.Float64bits(want[i]) {
-				t.Fatalf("innerProduct=%016x %.17g want %016x %.17g",
-					math.Float64bits(got), got,
-					math.Float64bits(want[i]), want[i])
+			ref := want[i]
+			gotScalar := innerProductF32Libopus(tc.a, tc.b, len(tc.a))
+			if math.Float64bits(gotScalar) != math.Float64bits(ref.scalar) {
+				t.Fatalf("scalar innerProduct=%016x %.17g want %016x %.17g",
+					math.Float64bits(gotScalar), gotScalar,
+					math.Float64bits(ref.scalar), ref.scalar)
 			}
+			expected := ref.scalar
+			if libopusSILKInnerProductUsesAVX2 {
+				if !ref.nativeAVX2 {
+					t.Fatal("Go dispatch uses AVX2/FMA but the libopus reference does not; use the native reference build")
+				}
+				expected = ref.native
+			}
+			got := innerProductFLP(tc.a, tc.b, len(tc.a))
+			if math.Float64bits(got) != math.Float64bits(expected) {
+				t.Fatalf("dispatched innerProduct=%016x %.17g want %016x %.17g",
+					math.Float64bits(got), got,
+					math.Float64bits(expected), expected)
+			}
+			t.Logf("Go AVX2=%t C native AVX2=%t scalar=%.17g native=%.17g dispatched=%.17g",
+				libopusSILKInnerProductUsesAVX2, ref.nativeAVX2, ref.scalar, ref.native, got)
 		})
 	}
 }
