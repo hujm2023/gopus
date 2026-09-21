@@ -439,7 +439,6 @@ func (d *Decoder) decodeStereoPacketToMono(data []byte, frameSize int) ([]float3
 		silence = rd.DecodeBit(15) == 1
 	}
 	if silence {
-		samples := make([]float32, frameSize)
 		var silenceEArr [MaxBands * 2]celtGLog
 		silenceE := silenceEArr[:]
 		fillSilenceGLog(silenceE)
@@ -448,7 +447,18 @@ func (d *Decoder) decodeStereoPacketToMono(data []byte, frameSize int) ([]float3
 		d.updateBackgroundEnergy(lm)
 		d.rng = rd.Range()
 		d.resetPLCCadence(frameSize, origChannels)
-		return samples, nil
+
+		// libopus celt_decode_with_ec() does not special-case the silence frame: it
+		// zeroes the spectrum (denormalise_bands with silence=1) and runs the normal
+		// synthesis, so clt_mdct_backward still folds the carried overlap into the
+		// output and the frame emits the windowed tail of the previous frame before
+		// fading out. Handing back a zero-filled frame instead drops that tail and
+		// leaves the overlap and synthesis state stale, which desynchronizes every
+		// following frame. The energy bookkeeping above keeps the packet's two coded
+		// channels, because libopus resets C*nbEBands with C = stream_channels;
+		// only the synthesis runs at this path's mono output width.
+		d.channels = int32(origChannels)
+		return d.decodeSilenceFrame(frameSize, 0, 0, 0), nil
 	}
 
 	postfilterGain := float32(0)
@@ -862,8 +872,6 @@ func (d *Decoder) decodeStereoPacketToMonoHybrid(rd *rangecoding.Decoder, frameS
 		silence = rd.DecodeBit(15) == 1
 	}
 	if silence {
-		samples := ensureFloat32Slice(&d.scratchMonoMixF32, frameSize)
-		clear(samples[:frameSize])
 		var silenceEArr [MaxBands * 2]celtGLog
 		silenceE := silenceEArr[:]
 		fillSilenceGLog(silenceE)
@@ -872,7 +880,13 @@ func (d *Decoder) decodeStereoPacketToMonoHybrid(rd *rangecoding.Decoder, frameS
 		d.updateBackgroundEnergy(lm)
 		d.rng = rd.Range()
 		d.resetPLCCadence(frameSize, origChannels)
-		return samples[:frameSize], nil
+
+		// Same reason as decodeStereoPacketToMono: the silence frame runs the normal
+		// overlap-add synthesis so the previous frame's windowed tail is emitted and
+		// the overlap state stays consistent, while the energy bookkeeping above keeps
+		// the packet's two coded channels.
+		d.channels = int32(origChannels)
+		return d.decodeSilenceFrame(frameSize, 0, 0, 0), nil
 	}
 
 	postfilterGain := float32(0)
