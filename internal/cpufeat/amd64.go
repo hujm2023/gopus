@@ -4,6 +4,11 @@ package cpufeat
 
 func init() {
 	_, _, ecx1, _ := cpuid(1, 0)
+
+	// SSE4.1 is CPUID.01H:ECX bit 19. It needs neither AVX nor the OS XSAVE
+	// state, so it is recorded before the AVX early-outs below.
+	AMD64.HasSSE41 = isSet(19, ecx1)
+
 	hasOSXSAVE := isSet(27, ecx1)
 	hasAVX := isSet(28, ecx1)
 	hasFMA := isSet(12, ecx1)

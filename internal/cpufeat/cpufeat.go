@@ -10,6 +10,10 @@ package cpufeat
 type AMD64Features struct {
 	HasAVX2 bool
 	HasFMA  bool
+	// HasSSE41 gates kernels that use SSE4.1-only instructions such as PMULDQ
+	// and PMOVSXWD. The amd64 baseline the Go toolchain targets is SSE2, so a
+	// kernel that needs SSE4.1 must be gated at runtime rather than assumed.
+	HasSSE41 bool
 }
 
 // ARM64Features reports which optional arm64 (AArch64) instruction-set
