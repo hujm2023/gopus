@@ -3,11 +3,23 @@ package silk
 // nsqQuant4 batches independent delayed-decision states. Residuals are already
 // dithered and clamped to [-31<<10, 30<<10], as in silk/NSQ_del_dec.c.
 // Offset is one of the codec quantization offsets (32, 100, 240).
+//
+// A lane is a competing history for the same audio sample, not a consecutive
+// sample: the next sample depends on the winner/state updates outside this block.
+// r and rd are inputs; q0/q1 and cost0/cost1 are outputs ordered by local cost.
+// Keeping each field contiguous lets quantize4SSE41 operate on four int32 lanes
+// without gathering individual state structs inside the arithmetic kernel.
+// Packing and candidate reconstruction still belong to the caller and must be
+// included in end-to-end measurements; this is not a whole-NSQ vectorization.
 type nsqQuant4 struct {
 	r, rd                [4]int32
 	q0, q1, cost0, cost1 [4]int32
 }
 
+// quantize4Go is the lane-by-lane reference for quantize4. The signed-16 operand
+// narrowing in SMULBB/SMLABB, int32 wraparound, and strict rd1 < rd2 comparison
+// are bitstream constraints: on equal cost the second candidate is first.
+// TestQuantize4Parity covers clamped residuals, RDO boundaries and zero allocation.
 func quantize4Go(batch *nsqQuant4, offsetQ10i32, lambdaQ10i32 int32) {
 	useRDO := lambdaQ10i32 > 2048
 	rdoOffset := lambdaQ10i32/2 - 512

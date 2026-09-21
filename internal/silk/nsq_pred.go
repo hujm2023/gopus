@@ -26,6 +26,11 @@ func shortTermPrediction16(sLPCQ14 []int32, idx int, aQ12 []int16) int32 {
 	return out
 }
 
+// shortTermPrediction16StateGo is the scalar fallback for the order-16 state
+// kernel. Each product is shifted and truncated before the wrapping int32 sum;
+// shifting a full dot product only once would change discarded low-bit carries.
+// TestShortTermPrediction16StateKernelParity checks the same operation in SSE4.1.
+// See PERFORMANCE.md for the relationship to the four-state NSQ specializations.
 func shortTermPrediction16StateGo(sLPCQ14 *[maxSubFrameLength + nsqLpcBufLength]int32, idx int, aQ12 *[16]int16) int32 {
 	lpc := sLPCQ14[idx-15 : idx+1 : idx+1]
 	// Four independent accumulator chains break the serial SMLAWB dependency so

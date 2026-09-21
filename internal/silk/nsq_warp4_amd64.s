@@ -4,8 +4,9 @@
 
 // func warpedARFeedback24States4SSE41(ar *nsqWarpAR, c *[24]int16, w int32)
 //
-// Four-state warped AR feedback, one tap index across the four states held in a
-// 128-bit register. ar.state is the transposed state: row j is 32 bytes holding
+// Four-state warped AR feedback, one tap index across four states held in two
+// 128-bit registers (two 64-bit slots per register). ar.state is transposed:
+// row j is 32 bytes holding
 // the four states, one 64-bit slot each, with the int32 value in the low 32 bits.
 // ar.diff holds the per-state diff_Q14 inputs and ar.out receives the results, so
 // the whole kernel needs a single pointer and no frame-relative vector loads.

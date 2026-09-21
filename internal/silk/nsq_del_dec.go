@@ -369,6 +369,10 @@ func noiseShapeQuantizerDelDec(
 	decisionDelayActive int,
 	frameOffset int,
 ) {
+	// The batched kernels require 24 shaping taps, 16 prediction taps and four
+	// delayed-decision states. Lag/window checks below also prove the specialized
+	// loop's unchecked history accesses; all other configurations stay generic.
+	// CPU selection is separate, inside each arithmetic kernel (PERFORMANCE.md).
 	if shapingLPCOrder == maxShapeLpcOrder &&
 		predictLPCOrder == maxLPCOrder &&
 		nStatesDelayedDecision == maxDelDecStates &&
@@ -929,6 +933,9 @@ func noiseShapeQuantizerDelDec24States4Pred16(
 			batch.r[k], batch.rd[k] = rQ10, psDD.rdQ10
 			lpcByState[k], arByState[k], lfByState[k] = lpcPredQ14, nARQ14, nLFQ14
 		}
+		// All four residuals for this sample are ready before SIMD quantization.
+		// Reconstruction and winner/state updates follow in their scalar order;
+		// they must complete before preparing residuals for the next sample.
 		quantize4(&batch, offsetQ10i32, lambdaQ10i32)
 		for k := range maxDelDecStates {
 			psDD := &psDelDec[k]
@@ -1010,6 +1017,8 @@ func noiseShapeQuantizerDelDec24States4Pred16(
 			dst := &psDelDec[rdMaxInd]
 			copy(dst.sLPCQ14[i:nsqLpcBufLength+i], src.sLPCQ14[i:nsqLpcBufLength+i])
 			dst.nsqDelDecStateTail = src.nsqDelDecStateTail
+			// The active AR history lives in ar until subframe writeback; the
+			// struct-tail copy does not include these current transposed values.
 			for j := 0; j < maxShapeLpcOrder; j++ {
 				ar.set(rdMaxInd, j, ar.get(rdMinInd, j))
 			}
@@ -1174,6 +1183,9 @@ func noiseShapeQuantizerDelDecUnvoiced24States4Pred16(
 			batch.r[k], batch.rd[k] = rQ10, psDD.rdQ10
 			lpcByState[k], arByState[k], lfByState[k] = lpcPredQ14, nARQ14, nLFQ14
 		}
+		// All four residuals for this sample are ready before SIMD quantization.
+		// Reconstruction and winner/state updates follow in their scalar order;
+		// they must complete before preparing residuals for the next sample.
 		quantize4(&batch, offsetQ10i32, lambdaQ10i32)
 		for k := range maxDelDecStates {
 			psDD := &psDelDec[k]
@@ -1255,6 +1267,8 @@ func noiseShapeQuantizerDelDecUnvoiced24States4Pred16(
 			dst := &psDelDec[rdMaxInd]
 			copy(dst.sLPCQ14[i:nsqLpcBufLength+i], src.sLPCQ14[i:nsqLpcBufLength+i])
 			dst.nsqDelDecStateTail = src.nsqDelDecStateTail
+			// The active AR history lives in ar until subframe writeback; the
+			// struct-tail copy does not include these current transposed values.
 			for j := 0; j < maxShapeLpcOrder; j++ {
 				ar.set(rdMaxInd, j, ar.get(rdMinInd, j))
 			}

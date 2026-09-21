@@ -4,14 +4,21 @@ package silk
 // states used by the four-state specializations, plus the per-call scratch the
 // kernel reads and writes.
 //
-// state[j][k] is tap j of state k. Transposing is what lets one SSE4.1 register
-// carry a tap index across all four states, which is the only parallelism this
-// recurrence has. Only the low 32 bits of a slot carry the int32 state value: the
+// state[j][k] is tap j of state k. Each 32-byte row spans two SSE4.1 registers,
+// each carrying two states in 64-bit lanes for PMULDQ. The independent states
+// provide parallelism; the tap recurrence inside each state remains serial.
+// Only the low 32 bits of a slot carry the int32 state value: the
 // kernel leaves bits 48..63 of a product in the high half, so every access must go
 // through get/set and reading a slot directly as an int64 is not meaningful.
 //
 // The struct has 8-byte alignment, so nothing may use an SSE instruction that
 // requires an aligned memory operand on state; see nsq_warp4_amd64.s.
+// NSQState owns this reusable workspace. Each specialized subframe transposes
+// into it once, updates it throughout the sample loop, and writes it back once.
+// A winning-history replacement must also copy the corresponding state column;
+// copying nsqDelDecStateTail alone cannot update this authoritative workspace.
+// See PERFORMANCE.md, TestWarpedARFeedback24States4MatchesScalar and
+// TestWarpedARFeedback24States4Allocs.
 type nsqWarpAR struct {
 	state [maxShapeLpcOrder][maxDelDecStates]int64
 	// diff holds the input diff_Q14 of each state, filled by the caller.
