@@ -621,42 +621,7 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 
 	// Compute temporal VBR before the late transient patch can replace the
 	// original energies and short-block decision (libopus celt_encoder.c:2186).
-	if !e.lfe {
-		follow := float32(-10.0)
-		frameAvg := float32(0.0)
-		offset := float32(0.0)
-		if shortBlocks > 1 {
-			offset = float32(lm) * 0.5
-		}
-		bandEnd := nbBands
-		for i := start; i < bandEnd; i++ {
-			v := float32(energies[i]) - offset
-			if follow-1.0 > v {
-				follow = follow - 1.0
-			} else {
-				follow = v
-			}
-			if codedChannels == 2 && nbBands+i < len(energies) {
-				v2 := float32(energies[nbBands+i]) - offset
-				if v2 > follow {
-					follow = v2
-				}
-			}
-			frameAvg += follow
-		}
-		if bandEnd > start {
-			frameAvg /= float32(bandEnd - start)
-		}
-		temporalVBR := frameAvg - float32(e.specAvg)
-		if temporalVBR > 3.0 {
-			temporalVBR = 3.0
-		}
-		if temporalVBR < -1.5 {
-			temporalVBR = -1.5
-		}
-		e.specAvg = celtGLog(float32(e.specAvg) + float32(0.02)*temporalVBR)
-		e.lastTemporalVBR = celtGLog(temporalVBR)
-	}
+	e.UpdateTemporalVBRHistory(energies, nbBands, codedChannels, start, nbBands, lm, shortBlocks)
 
 	// Analysis arrays use the active-band stride, while predictor history keeps
 	// the full mode stride. Pack both channels before transient/dynalloc analysis.

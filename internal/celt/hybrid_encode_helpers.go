@@ -363,6 +363,51 @@ func (e *Encoder) StabilizeEnergiesBeforeCoarseHybrid(energies []celtGLog, start
 	}
 }
 
+// UpdateTemporalVBRHistory mirrors the libopus temporal-VBR block
+// (celt/celt_encoder.c:2186-2204): it folds the frame's band-log-energy contour
+// into spec_avg so the next CELT frame's temporal VBR target tracks the signal,
+// and records the current frame's temporal_vbr. bandLogE holds codedChannels
+// planes of nbBands entries each, and [start,end) is the band range the frame
+// codes (17..end for the CELT leg of a Hybrid frame). The Hybrid analysis path
+// has its own band-energy computation, so it must call this too; libopus runs
+// the block for every celt_encode_with_ec call regardless of hybrid mode.
+func (e *Encoder) UpdateTemporalVBRHistory(bandLogE []celtGLog, nbBands, codedChannels, start, end, lm, shortBlocks int) {
+	if e.lfe || nbBands <= 0 || end <= start || start < 0 || len(bandLogE) == 0 {
+		return
+	}
+	follow := float32(-10.0)
+	frameAvg := float32(0.0)
+	offset := float32(0.0)
+	if shortBlocks > 1 {
+		offset = float32(lm) * 0.5
+	}
+	for i := start; i < end; i++ {
+		v := float32(bandLogE[i]) - offset
+		if follow-1.0 > v {
+			follow = follow - 1.0
+		} else {
+			follow = v
+		}
+		if codedChannels == 2 && nbBands+i < len(bandLogE) {
+			v2 := float32(bandLogE[nbBands+i]) - offset
+			if v2 > follow {
+				follow = v2
+			}
+		}
+		frameAvg += follow
+	}
+	frameAvg /= float32(end - start)
+	temporalVBR := frameAvg - float32(e.specAvg)
+	if temporalVBR > 3.0 {
+		temporalVBR = 3.0
+	}
+	if temporalVBR < -1.5 {
+		temporalVBR = -1.5
+	}
+	e.specAvg = celtGLog(float32(e.specAvg) + float32(0.02)*temporalVBR)
+	e.lastTemporalVBR = celtGLog(temporalVBR)
+}
+
 // UpdateEnergyErrorHybrid mirrors libopus energyError cadence in hybrid mode:
 // clear all bands, then store clipped post-finalise residuals for coded bands.
 func (e *Encoder) UpdateEnergyErrorHybrid(energies, quantizedEnergies []celtGLog, start, end, nbBands int) {

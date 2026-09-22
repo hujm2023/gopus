@@ -1656,6 +1656,14 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 		}
 	}
 
+	// Temporal VBR history: libopus celt_encoder.c:2186 updates spec_avg for every
+	// celt_encode_with_ec call, including the CELT leg of a Hybrid frame. The
+	// Hybrid analysis path computes its own band energies, so it must fold them in
+	// here too; the accumulated value drives the next CELT-only frame's temporal
+	// VBR target. libopus does this before the late transient patch and before the
+	// budget-driven shortBlock reset, so the analysis-time shortBlocks is used.
+	e.celtEncoder.UpdateTemporalVBRHistory(energies, nbBands, channels, start, end, lm, shortBlocks)
+
 	// Keep natural MDCT-derived band energies for bands 0-16.
 	// In libopus, compute_band_energies runs on the full MDCT output and
 	// dynalloc_analysis uses all band energies (0 to end) even in hybrid mode.
