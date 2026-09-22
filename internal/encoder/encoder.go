@@ -317,7 +317,6 @@ type Encoder struct {
 	scratchFrameBytes       []byte    // Backing storage for kept subframe payloads
 	scratchQEXTPayloadBytes []byte    // Backing storage for kept QEXT payloads
 	scratchDelayedPCM       []opusRes // Delay-compensated CELT input
-	scratchDelayState       []opusRes // Packet-local delay history for transition-prefill replay
 	// Snapshot of libopus delay-history CELT transition prefill window (Fs/400).
 	scratchTransitionPrefill []opusRes
 	scratchSilkPrefill       []opusRes
@@ -1278,13 +1277,12 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 				}
 			}
 		}
-		e.updateDelayBuffer(framePCM, frameSize)
+		if !multiFrame && !e.silkDTXPacketSuppressed() {
+			e.updateDelayBuffer(framePCM, frameSize)
+		}
 	case ModeHybrid:
 		if frameSize > f20 {
-			delayState := e.ensureDelayState(len(e.delayBuffer))
-			copy(delayState, e.delayBuffer)
-			celtPCM := e.applyDelayCompensation(framePCM, frameSize)
-			packet, err = e.encodeHybridMultiFramePacket(framePCM, celtPCM, vadPCM, lookaheadSlice, delayState, frameSize, transitionToCELT, int(e.bitrate), int(encodingBitrate), dredBitrate, dredExtraDelay, maxDataBytes)
+			packet, err = e.encodeHybridMultiFramePacket(framePCM, vadPCM, lookaheadSlice, frameSize, transitionToCELT, int(e.bitrate), int(encodingBitrate), dredBitrate, dredExtraDelay, maxDataBytes)
 		} else {
 			originalBitrate := e.bitrate
 			maxPacketBytes := 0
@@ -1296,9 +1294,12 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 			}
 			prefillRate := e.hybridSILKPrefillBitrate(frameSize, maxPacketBytes, maxDataBytes, dredBitrate, true, transitionToCELT, e.silkBWSwitch)
 			e.maybePrefillSILKOnModeTransition(actualMode, prefillRate)
-			celtPCM := e.applyDelayCompensation(framePCM, frameSize)
+			celtPCM := e.prepareDelayCompensation(framePCM, frameSize)
 			dredNoDecision := e.dredEncodingActive() && !e.lastOpusVADValid
 			frameData, err = e.encodeHybridFrameWithMaxPacketAndTransition(framePCM, celtPCM, lookaheadSlice, frameSize, maxPacketBytes, maxDataBytes, dredBitrate, false, true, transitionToCELT, false)
+			if err == nil && !e.silkDTXPacketSuppressed() {
+				e.updateDelayBuffer(framePCM, frameSize)
+			}
 			if encodingBitrate != originalBitrate {
 				e.bitrate = originalBitrate
 			}
@@ -2189,13 +2190,6 @@ func (e *Encoder) ensureDelayedPCM(size int) []opusRes {
 	return e.scratchDelayedPCM[:size]
 }
 
-func (e *Encoder) ensureDelayState(size int) []opusRes {
-	if cap(e.scratchDelayState) < size {
-		e.scratchDelayState = make([]opusRes, size)
-	}
-	return e.scratchDelayState[:size]
-}
-
 func (e *Encoder) ensureTransitionPrefill(size int) []opusRes {
 	if cap(e.scratchTransitionPrefill) < size {
 		e.scratchTransitionPrefill = make([]opusRes, size)
@@ -2221,6 +2215,14 @@ func (e *Encoder) ensureCELTPrefill(size int) []opusRes {
 // and returns a frame-sized slice for CELT processing. The delay buffer is updated
 // with the latest samples after constructing the output.
 func (e *Encoder) applyDelayCompensation(pcm []opusRes, frameSize int) []opusRes {
+	out := e.prepareDelayCompensation(pcm, frameSize)
+	e.updateDelayBuffer(pcm, frameSize)
+	return out
+}
+
+// prepareDelayCompensation reads delay history without committing a packet.
+// SILK-internal DTX returns before libopus advances this history.
+func (e *Encoder) prepareDelayCompensation(pcm []opusRes, frameSize int) []opusRes {
 	channels := max(int(e.channels), 1)
 	frameSamples := min(len(pcm), frameSize*channels)
 	sampleRate := int(e.sampleRate)
@@ -2268,7 +2270,6 @@ func (e *Encoder) applyDelayCompensation(pcm []opusRes, frameSize int) []opusRes
 		clear(out[frameSamples:])
 	}
 
-	e.updateDelayBufferInternal(pcm, frameSamples, encoderBufferSamples)
 	return out
 }
 
@@ -3177,7 +3178,7 @@ func (e *Encoder) encodeSILKFrameWithDREDAndMax(pcm []opusRes, lookahead []opusR
 		if incomingSwitch {
 			e.silkRedundancyReserve = bytes*8 + 1
 		}
-		celtPCM := e.applyDelayCompensation(pcm, frameSize)
+		celtPCM := e.prepareDelayCompensation(pcm, frameSize)
 		if e.hybridState == nil {
 			e.hybridState = &HybridState{prevHBGain: 1, stereoWidthQ14: 16384, silkStereoWidthQ14: 16384}
 		}
@@ -3813,7 +3814,7 @@ func (e *Encoder) encodeCELTMultiFramePacket(framePCM []opusRes, vadPCM []opusRe
 
 // encodeHybridMultiFramePacket encodes long hybrid packets by splitting into
 // 20ms hybrid frames and packing them with Opus multi-frame framing.
-func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes, vadPCM []opusRes, lookahead []opusRes, delayState []opusRes, frameSize int, transitionToCELT bool, originalBitrate, encodingBitrate, dredBitrate, dredExtraDelay, outDataBytes int) ([]byte, error) {
+func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, vadPCM []opusRes, lookahead []opusRes, frameSize int, transitionToCELT bool, originalBitrate, encodingBitrate, dredBitrate, dredExtraDelay, outDataBytes int) ([]byte, error) {
 	f20 := e.frame20ms()
 	if frameSize <= f20 || frameSize%f20 != 0 {
 		return nil, ErrInvalidFrameSize
@@ -3823,20 +3824,12 @@ func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes,
 		return nil, ErrInvalidFrameSize
 	}
 	channels := int(e.channels)
-	if len(pcm) != frameSize*channels || len(celtPCM) != frameSize*channels || len(vadPCM) != frameSize*channels {
+	if len(pcm) != frameSize*channels || len(vadPCM) != frameSize*channels {
 		return nil, ErrInvalidFrameSize
 	}
 	if e.analysisReadBakSet && e.analyzer != nil {
 		e.analyzer.ReadPos = e.analysisReadPosBak
 		e.analyzer.ReadSubframe = e.analysisSubframeBak
-	}
-
-	savedDelayBuffer := e.delayBuffer
-	if len(delayState) == len(savedDelayBuffer) {
-		e.delayBuffer = delayState
-		defer func() {
-			e.delayBuffer = savedDelayBuffer
-		}()
 	}
 
 	e.resetPacketFrameScratch()
@@ -3882,7 +3875,6 @@ func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes,
 		start := i * frameStride
 		end := start + frameStride
 		subPCM := pcm[start:end]
-		subCELTPCM := celtPCM[start:end]
 		subVADPCM := vadPCM[start:end]
 		e.updateSILKDTXMode(isDigitalSilenceRes(subVADPCM, e.lsbDepth))
 
@@ -3935,6 +3927,7 @@ func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes,
 			e.maybePrefillSILKOnModeTransitionWithOptions(ModeHybrid, i > 0, i == 0, prefillRate)
 		}
 
+		subCELTPCM := e.prepareDelayCompensation(subPCM, f20)
 		frameData, err := e.encodeHybridFrameWithMaxPacketAndTransition(subPCM, subCELTPCM, subLookahead, f20, currMax, 0, dredBitrate, true, allowTransitionRedundancy, subframeToCELT, runCELTTransitionPrefill)
 		if err != nil {
 			e.bitrate = savedBitrate
@@ -3969,7 +3962,7 @@ func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes,
 			totSize += len(frameCopy) + 1
 		}
 		frames[i] = frameCopy
-		if len(e.delayBuffer) > 0 {
+		if !internalDTX && len(e.delayBuffer) > 0 {
 			e.updateDelayBufferInternal(subPCM, len(subPCM), len(e.delayBuffer))
 		}
 		if prevSize >= 0 && len(frameCopy) != prevSize {
@@ -4136,6 +4129,9 @@ func (e *Encoder) encodeSILKMultiFramePacket(pcm []opusRes, vadPCM []opusRes, fr
 			totSize += len(frameCopy) + 1
 		}
 		frames[i] = frameCopy
+		if !internalDTX {
+			e.updateDelayBuffer(subPCM, encFrameSize)
+		}
 		if prevSize >= 0 && len(frameCopy) != prevSize {
 			sameSize = false
 		}
