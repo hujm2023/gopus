@@ -1587,10 +1587,11 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 	}
 	totalBits := targetPayloadBytes * 8
 	tell0Frac := re.TellFrac()
-	if used := re.Tell(); totalBits < used+8 {
-		// Ensure we don't end up with negative budgets if SILK used more bits.
-		totalBits = used + 8
-	}
+	// libopus does not floor the CELT leg's budget: celt_encoder.c:2603 computes
+	// bits = (nbCompressedBytes*8<<BITRES) - ec_tell_frac(enc) - 1 with no lower
+	// bound, so a Hybrid frame whose SILK payload already consumed the packet
+	// hands CELT a negative budget. That collapses the allocation and suppresses
+	// the anti-collapse reservation, which a floor would wrongly re-enable.
 	// Match libopus quant_coarse_energy() nbAvailableBytes, which is
 	// nbCompressedBytes - nbFilledBytes: the bytes the CELT leg still has at entry,
 	// after the already-coded SILK/range bits. libopus computes this for both CBR
