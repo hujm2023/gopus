@@ -132,7 +132,6 @@ type Encoder struct {
 	useFEC                bool                                // Enable in-band FEC (LBRR)
 	lbrrEnabled           bool                                // LBRR currently active (depends on bitrate/loss)
 	lbrrPrevPacketHadLBRR bool                                // Previous packet had LBRR enabled (silk_setup_LBRR LBRR_in_previous_packet)
-	lbrrLTPRoundLoss      bool                                // Use LBRR round-loss in LTP scale (previous packet had LBRR)
 	lbrrGainIncreases     int32                               // Gain increase for LBRR encoding
 	lbrrPrevLastGainIdx   int8                                // Previous frame's last gain index for LBRR
 	lbrrFlags             [maxFramesPerPacket]int32           // LBRR flags per frame in packet
@@ -990,7 +989,6 @@ func (e *Encoder) updateLBRREnabled() {
 func (e *Encoder) setupLBRRForNewPacket() {
 	lbrrInPreviousPacket := e.lbrrPrevPacketHadLBRR
 	e.lbrrEnabled = e.useFEC
-	e.lbrrLTPRoundLoss = lbrrInPreviousPacket && e.useFEC
 	if !e.lbrrEnabled {
 		return
 	}

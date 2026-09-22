@@ -7,8 +7,13 @@ func (e *Encoder) computeLTPScaleIndex(ltpPredGainQ7 int32, condCoding int) int 
 		return 0
 	}
 
+	// libopus silk/float/LTP_scale_ctrl_FLP.c conditions the round-loss reduction
+	// on psEnc->sCmn.LBRR_flag: whether THIS packet actually carries LBRR data
+	// (the packet header sets it from the previous frame's LBRR decision), not on
+	// whether LBRR was merely enabled for the previous packet. silk/fixed/
+	// LTP_scale_ctrl_FIX.c reads the same field.
 	roundLoss := max(e.packetLossPercent*e.nFramesPerPacket, 0)
-	if e.lbrrLTPRoundLoss {
+	if e.lbrrFlag != 0 {
 		roundLoss = 2 + (roundLoss*roundLoss)/100
 	}
 
