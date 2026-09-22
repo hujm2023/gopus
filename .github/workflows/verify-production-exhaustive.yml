@@ -22,19 +22,21 @@ jobs:
   verify-exhaustive-linux:
     name: verify-exhaustive-linux
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: go.mod
           cache: true
 
       - name: Cache pinned libopus build
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
             tmp_check/opus-${{ env.LIBOPUS_VERSION }}
@@ -50,12 +52,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ffmpeg opus-tools
 
+      - name: Run exhaustive production verification
+        run: make verify-production-exhaustive
+
       - name: Generate release evidence bundle
         run: make release-evidence
 
       - name: Upload release evidence artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-evidence-${{ github.run_id }}
           path: reports/release/**

@@ -348,6 +348,8 @@ does not re-run the codec suites, since doing so against a live native libopus
 reference compares gopus's single portable float order against another toolchain's
 rounding rather than measuring a defect.
 
+Workflow triggers, trust boundaries, and local validation: [CI and releases](.github/CI.md).
+
 Security policy: [SECURITY.md](SECURITY.md). Consumer smoke test:
 [examples/external-consumer-smoke/smoke_test.go](examples/external-consumer-smoke/smoke_test.go).
 

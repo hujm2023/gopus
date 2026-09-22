@@ -156,7 +156,7 @@ write_summary() {
     libopus_actual_sha="missing"
   fi
   libopus_expected_sha="$(expected_libopus_sha256)"
-  release_tag="${GITHUB_REF_NAME:-${TAG:-not-set}}"
+  release_tag="${TAG:-${GITHUB_REF_NAME:-not-set}}"
   if [[ "${FAILED}" -eq 0 ]]; then
     overall="PASS"
   else

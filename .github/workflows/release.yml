@@ -12,94 +12,88 @@ on:
         type: string
 
 permissions:
-  contents: write
-  checks: read
+  contents: read
 
 env:
   LIBOPUS_VERSION: "1.6.1"
   GOPUS_DISABLE_OPUSDEC: "0"
   GOPUS_DISABLE_OPUSENC: "1"
+  GOWORK: "off"
 
 concurrency:
   group: release-${{ github.event.inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
-  publish-release:
-    name: publish-release
+  verify-release:
+    name: verify-release
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      sha: ${{ steps.meta.outputs.sha }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - name: Checkout release workflow tools
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
+          persist-credentials: false
           fetch-depth: 0
 
-      - name: Resolve tag and release notes
+      - name: Resolve exact tag commit
         id: meta
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            tag="${{ github.event.inputs.tag }}"
-            git fetch --force --tags origin "refs/tags/${tag}:refs/tags/${tag}"
-            git checkout "refs/tags/${tag}"
-          else
-            tag="${GITHUB_REF_NAME}"
-          fi
-
-          notes_path="README.md"
-          if [[ ! -s "${notes_path}" ]]; then
-            echo "missing release notes: ${notes_path}" >&2
-            exit 1
-          fi
-
-          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
-          echo "notes_path=${notes_path}" >> "$GITHUB_OUTPUT"
-
-      - name: Require green CI on the tagged commit
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.tag }}
         shell: bash
         run: |
           set -euo pipefail
-
-          sha="$(git rev-parse HEAD)"
-          echo "Verifying required CI checks are green on ${sha}"
-
-          # The required branch checks are aggregate gates: test-linux fans out to
-          # every codec sub-lane (parity, core-oracles, build-config-matrix,
-          # fixedpoint), and test-macos/test-windows run the exhaustive tier. They
-          # are the authoritative, arch-matched codec gate, so a release publishes
-          # only when they are green on the exact commit the tag points at.
-          latest="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs?per_page=100" \
-            --jq '[.check_runs[] | {name, conclusion, started_at}] | group_by(.name) | map(max_by(.started_at)) | .[] | [.name, .conclusion] | @tsv')"
-          printf '%s\n' "${latest}"
-
-          fail=0
-          for name in lint-static-analysis test-linux perf-linux test-macos test-windows; do
-            concl="$(awk -F'\t' -v n="${name}" '$1==n{print $2}' <<<"${latest}")"
-            if [[ "${concl}" != "success" ]]; then
-              echo "::error::required check '${name}' is '${concl:-missing}' on ${sha}"
-              fail=1
-            fi
-          done
-
-          if [[ "${fail}" -ne 0 ]]; then
-            echo "::error::tagged commit ${sha} is not green on the required CI checks; refusing to publish"
+          tag="${REQUESTED_TAG:-${GITHUB_REF_NAME}}"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::invalid release tag"
             exit 1
           fi
-          echo "all required checks are green"
+          git check-ref-format "refs/tags/${tag}"
+          git fetch --force origin "refs/tags/${tag}:refs/tags/${tag}"
+          sha="$(git rev-parse --verify "refs/tags/${tag}^{commit}")"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Require successful CI push run on the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ steps.meta.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release-ci"
+          gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
+            -f head_sha="$RELEASE_SHA" -f event=push -f branch=master -f per_page=100 \
+            --paginate --slurp > "$RUNNER_TEMP/release-ci/runs.json"
+          jq '[.[].workflow_runs[]] | max_by([.run_number, .run_attempt])' \
+            "$RUNNER_TEMP/release-ci/runs.json" > "$RUNNER_TEMP/release-ci/run.json"
+          run_id="$(jq -er '.id' "$RUNNER_TEMP/release-ci/run.json")"
+          attempt="$(jq -er '.run_attempt' "$RUNNER_TEMP/release-ci/run.json")"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/attempts/${attempt}/jobs?per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/release-ci/jobs.json"
+          python3 .github/scripts/verify_release_ci.py \
+            "$RUNNER_TEMP/release-ci/run.json" "$RUNNER_TEMP/release-ci/jobs.json" \
+            "$RELEASE_SHA" "$GITHUB_REPOSITORY"
+
+      - name: Checkout verified source commit
+        env:
+          RELEASE_SHA: ${{ steps.meta.outputs.sha }}
+        run: git checkout --detach "$RELEASE_SHA"
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: go.mod
           cache: true
 
       - name: Cache pinned libopus build
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
             tmp_check/opus-${{ env.LIBOPUS_VERSION }}
@@ -115,75 +109,89 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ffmpeg opus-tools
 
-      - name: Run full release verification and evidence capture
+      - name: Run release evidence capture
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
         run: make release-evidence
 
-      - name: Upload evidence bundle on failure (diagnosis)
+      - name: Upload evidence bundle on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: release-evidence-failed-${{ steps.meta.outputs.tag }}
+          name: release-evidence-failed-${{ github.run_id }}-${{ github.run_attempt }}
           path: reports/release/
           if-no-files-found: warn
 
-      - name: Archive release evidence
-        id: evidence
+      - name: Package verified release evidence and notes
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          RELEASE_SHA: ${{ steps.meta.outputs.sha }}
         shell: bash
         run: |
           set -euo pipefail
           summary="$(find reports/release -maxdepth 1 -type f -name 'release-evidence-*.md' | sort | tail -n 1)"
-          if [[ -z "${summary}" || ! -s "${summary}" ]]; then
-            echo "release evidence summary is missing" >&2
-            exit 1
-          fi
-          if ! grep -q 'Overall result: PASS' "${summary}"; then
-            echo "release evidence summary did not record a passing run: ${summary}" >&2
-            exit 1
-          fi
+          test -s "$summary"
+          grep -Fx -- '- Overall result: PASS' "$summary"
+          grep -Fx -- "- Commit SHA: ${RELEASE_SHA}" "$summary"
+          grep -Fx -- "- Release tag: ${TAG}" "$summary"
+          test -s README.md
+          mkdir release-bundle
+          cp README.md release-bundle/release-notes.md
+          cp "$summary" "release-bundle/release-evidence-${TAG}.md"
+          cp "$RUNNER_TEMP/release-ci/run.json" reports/release/ci-run.json
+          cp "$RUNNER_TEMP/release-ci/jobs.json" reports/release/ci-jobs.json
+          tar -C reports -czf "release-bundle/release-evidence-${TAG}.tar.gz" release
+          cd release-bundle
+          sha256sum "release-evidence-${TAG}.md" "release-evidence-${TAG}.tar.gz" > SHA256SUMS
 
-          archive="release-evidence-${{ steps.meta.outputs.tag }}.tar.gz"
-          tagged_summary="release-evidence-${{ steps.meta.outputs.tag }}.md"
-          cp "${summary}" "${tagged_summary}"
-          tar -C reports -czf "${archive}" release
-          test -s "${archive}" || { echo "release evidence archive is empty" >&2; exit 1; }
-          test -s "${tagged_summary}" || { echo "tagged release evidence summary is empty" >&2; exit 1; }
-
-          echo "archive=${archive}" >> "$GITHUB_OUTPUT"
-          echo "summary=${tagged_summary}" >> "$GITHUB_OUTPUT"
-
-      - name: Upload release evidence artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload verified release bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: release-evidence-${{ steps.meta.outputs.tag }}
-          path: |
-            ${{ steps.evidence.outputs.archive }}
-            ${{ steps.evidence.outputs.summary }}
+          name: release-bundle-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-bundle/
           if-no-files-found: error
+
+  publish-release:
+    name: publish-release
+    needs: verify-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified release bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-bundle-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-bundle
 
       - name: Publish GitHub release
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify-release.outputs.tag }}
+          RELEASE_SHA: ${{ needs.verify-release.outputs.sha }}
         shell: bash
         run: |
           set -euo pipefail
-
-          tag="${{ steps.meta.outputs.tag }}"
-          notes_path="${{ steps.meta.outputs.notes_path }}"
-          archive="${{ steps.evidence.outputs.archive }}"
-          summary="${{ steps.evidence.outputs.summary }}"
-
-          if gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            gh release edit "${tag}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --title "gopus ${tag}" \
-              --notes-file "${notes_path}"
-            gh release upload "${tag}" "${archive}" "${summary}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --clobber
+          cd release-bundle
+          sha256sum --check SHA256SUMS
+          # Reject a moved tag between verification and publication, including annotated tags.
+          refs="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${TAG}" "refs/tags/${TAG}^{}")"
+          current="$(awk '$2 ~ /\^\{\}$/ {print $1}' <<< "$refs")"
+          if [[ -z "$current" ]]; then
+            current="$(awk -v ref="refs/tags/${TAG}" '$2 == ref {print $1}' <<< "$refs")"
+          fi
+          if [[ "$current" != "$RELEASE_SHA" ]]; then
+            echo "::error::release tag moved or disappeared after verification"
+            exit 1
+          fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --title "gopus ${TAG}" --notes-file release-notes.md
+            gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" \
+              "release-evidence-${TAG}.tar.gz" "release-evidence-${TAG}.md" SHA256SUMS --clobber
           else
-            gh release create "${tag}" "${archive}" "${summary}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --title "gopus ${tag}" \
-              --notes-file "${notes_path}" \
-              --verify-tag
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              "release-evidence-${TAG}.tar.gz" "release-evidence-${TAG}.md" SHA256SUMS \
+              --title "gopus ${TAG}" --notes-file release-notes.md --verify-tag
           fi

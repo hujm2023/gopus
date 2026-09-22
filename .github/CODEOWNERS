@@ -1,6 +1,12 @@
 # Trust-sensitive release, CI, security, and support-surface files require owner review.
-.github/workflows/* @thesyncim
-SECURITY.md @thesyncim
-README.md @thesyncim
-tools/ensure_libopus.sh @thesyncim
-Makefile @thesyncim
+.github/workflows/* @hujm2023
+SECURITY.md @hujm2023
+README.md @hujm2023
+tools/ensure_libopus.sh @hujm2023
+Makefile @hujm2023
+
+.github/CODEOWNERS @hujm2023
+.github/scripts/* @hujm2023
+.github/dependabot.yml @hujm2023
+tools/gen_release_evidence.sh @hujm2023
+trust_docs_contract_test.go @hujm2023

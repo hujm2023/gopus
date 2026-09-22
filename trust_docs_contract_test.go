@@ -1,7 +1,9 @@
 package gopus_test
 
 import (
+	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -66,12 +68,15 @@ func TestTrustSensitiveFilesHaveCodeOwners(t *testing.T) {
 	codeowners := mustReadDocForTest(t, ".github/CODEOWNERS")
 	for _, pattern := range []string{
 		".github/workflows/*",
+		".github/CODEOWNERS",
+		".github/scripts/*",
+		"tools/gen_release_evidence.sh",
 		"SECURITY.md",
 		"README.md",
 		"tools/ensure_libopus.sh",
 		"Makefile",
 	} {
-		if !strings.Contains(codeowners, pattern+" @thesyncim") {
+		if !strings.Contains(codeowners, pattern+" @hujm2023") {
 			t.Fatalf(".github/CODEOWNERS missing owner for %s", pattern)
 		}
 	}
@@ -161,4 +166,45 @@ func sortedKeys(m map[string]bool) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func TestCIWorkflowContract(t *testing.T) {
+	ci := mustReadDocForTest(t, ".github/workflows/ci.yml")
+	_, aggregate, ok := strings.Cut(ci, "\n  test-linux:\n")
+	if !ok {
+		t.Fatal("missing test-linux aggregate")
+	}
+	aggregate, _, _ = strings.Cut(aggregate, "\n  perf-linux:")
+	for _, job := range []string{"lint-tag-matrix", "test-linux-conformance", "test-linux-arm64-fixtures", "vulnerability-scan"} {
+		if !strings.Contains(aggregate, "      - "+job+"\n") || !strings.Contains(aggregate, "needs."+job+".result") {
+			t.Fatalf("test-linux must require and check %s", job)
+		}
+	}
+	paths, err := filepath.Glob(".github/workflows/*.yml")
+	if err != nil || len(paths) == 0 {
+		t.Fatalf("workflow files: %v", err)
+	}
+	pinned := regexp.MustCompile(`@[0-9a-f]{40}(\s|$)`)
+	for _, path := range paths {
+		for line := range strings.SplitSeq(mustReadDocForTest(t, path), "\n") {
+			if strings.Contains(line, "uses:") && !pinned.MatchString(line) {
+				t.Errorf("%s: action must use a commit SHA: %s", path, line)
+			}
+		}
+	}
+	release := mustReadDocForTest(t, ".github/workflows/release.yml")
+	_, publish, ok := strings.Cut(release, "\n  publish-release:\n")
+	if !ok || !strings.Contains(publish, "needs: verify-release") || strings.Contains(publish, "actions/checkout@") {
+		t.Fatal("publish must depend on verification and must not check out repository code")
+	}
+	if strings.Count(release, "contents: write") != 1 || !strings.Contains(publish, "contents: write") {
+		t.Fatal("only publication may receive contents: write")
+	}
+	if strings.Contains(release, `tag="${{`) || strings.Contains(release, `TAG="${{`) {
+		t.Fatal("release tag inputs must pass through environment variables")
+	}
+	exhaustive := mustReadDocForTest(t, ".github/workflows/verify-production-exhaustive.yml")
+	if !strings.Contains(exhaustive, "run: make verify-production-exhaustive") {
+		t.Fatal("exhaustive workflow must execute the exhaustive gate")
+	}
 }
