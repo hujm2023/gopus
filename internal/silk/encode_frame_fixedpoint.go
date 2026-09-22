@@ -789,3 +789,35 @@ func (e *Encoder) silkEncodeDoVADFIX(st *silkEncodeFrameFIXState) int {
 	st.indicesSignalType = int8(typeUnvoiced)
 	return 1
 }
+
+// These bridges expose the existing fixed VAD state without counting normal
+// fixed frames a second time in the shared float orchestration.
+func (e *Encoder) resetFixedDTXPacket() {
+	st := e.ensureFixedState()
+	st.inDTX = 0
+	if e.useDTX {
+		st.inDTX = 1
+	}
+}
+func (e *Encoder) fixedInDTX() bool {
+	return e.fixed != nil && e.fixed.initialized && e.fixed.inDTX != 0
+}
+func (e *Encoder) fixedDTXReady() bool {
+	return e.fixed != nil && e.fixed.initialized && e.fixed.noSpeechCounter >= nbSpeechFramesBeforeDTX
+}
+func (e *Encoder) advanceFixedDTXPrefill(activity int32) {
+	st := e.ensureFixedState()
+	if activity >= speechActivityDTXThresholdQ8 {
+		st.noSpeechCounter = 0
+		st.inDTX = 0
+		return
+	}
+	st.noSpeechCounter++
+	if st.noSpeechCounter <= nbSpeechFramesBeforeDTX {
+		st.inDTX = 0
+	}
+	if st.noSpeechCounter > maxConsecutiveDTX+nbSpeechFramesBeforeDTX {
+		st.noSpeechCounter = nbSpeechFramesBeforeDTX
+		st.inDTX = 0
+	}
+}

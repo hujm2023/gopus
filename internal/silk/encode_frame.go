@@ -212,6 +212,7 @@ func (e *Encoder) EncodeFrame(pcm []float32, lookahead []float32, vadFlag bool) 
 			speechActivityQ8 = 50
 		}
 	}
+	e.advanceDTXVAD(speechActivityQ8)
 	e.lastSpeechActivityQ8 = speechActivityQ8
 
 	// Step 1.1: Update noise shaping lookahead buffer and select delayed frame
@@ -797,8 +798,14 @@ func (e *Encoder) finalizeEncodeFrame(frameSamples, payloadSizeMs int, vadFlag, 
 	// buffer ec_enc_done() actually emits; libopus uses this larger pre-flush
 	// estimate for the reservoir, NOT the flushed length.
 	nBytesOut := max((e.rangeEncoder.Tell()+7)>>3, 0)
+	if e.InDTX() {
+		nBytesOut = 0
+	}
 
-	raw := e.finalizePacketRange(e.rangeEncoder)
+	var raw []byte
+	if !e.InDTX() {
+		raw = e.finalizePacketRange(e.rangeEncoder)
+	}
 	resultLen := len(raw)
 
 	// Match libopus: return exactly ec_tell() byte count for the frame.
@@ -852,6 +859,9 @@ func (e *Encoder) updateAllowBandwidthSwitch(payloadSizeMs int) {
 func (e *Encoder) PrefillFrame(pcm []float32) {
 	if len(pcm) == 0 {
 		return
+	}
+	if e.speechActivitySet {
+		e.advanceDTXVAD(e.speechActivityQ8)
 	}
 	config := GetBandwidthConfig(e.bandwidth)
 	subframeSamples := config.SubframeSamples
@@ -1127,7 +1137,13 @@ func (e *Encoder) EncodePacketWithFECWithVADStates(pcm []float32, lookahead []fl
 	// As in the single-frame path, this pre-flush (ec_tell+7)>>3 estimate is what
 	// libopus feeds into the reservoir; it can exceed the flushed buffer length.
 	nBytesOut := max((e.rangeEncoder.Tell()+7)>>3, 0)
-	raw := e.finalizePacketRange(e.rangeEncoder)
+	if e.InDTX() {
+		nBytesOut = 0
+	}
+	var raw []byte
+	if !e.InDTX() {
+		raw = e.finalizePacketRange(e.rangeEncoder)
+	}
 	resultLen := len(raw)
 	result := raw[:resultLen]
 	if e.targetRateBps > 0 {

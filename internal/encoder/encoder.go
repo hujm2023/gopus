@@ -151,7 +151,8 @@ type Encoder struct {
 	// multiFrameDTXCount is the number of internal sub-frames the most recent
 	// encode*MultiFramePacket call suppressed via the per-sub-frame DTX decision
 	// (libopus opus_encoder.c dtx_count). It is transient per Encode call.
-	multiFrameDTXCount int
+	multiFrameDTXCount     int
+	multiFrameSILKDTXCount int
 	// multiFrameLastSubframeDTX records whether the final internal sub-frame of
 	// the most recent encode*MultiFramePacket call was DTX-suppressed. libopus
 	// reports st->rangeFinal from the last opus_encode_frame_native call in the
@@ -166,6 +167,7 @@ type Encoder struct {
 
 	// DTX (Discontinuous Transmission) controls
 	dtxEnabled bool
+	silkUseDTX bool
 	dtx        *dtxState
 	rng        uint32 // RNG for comfort noise
 	finalRange uint32
@@ -559,6 +561,7 @@ func (e *Encoder) SampleRate() int {
 
 // Reset clears the encoder state for a new stream.
 func (e *Encoder) Reset() {
+	e.silkUseDTX = false
 	if len(e.delayBuffer) > 0 {
 		clear(e.delayBuffer)
 	}
@@ -568,10 +571,12 @@ func (e *Encoder) Reset() {
 	if e.silkEncoder != nil {
 		e.silkEncoder.Reset()
 		e.silkEncoder.SetReducedDependency(e.predictionDisabled)
+		e.silkEncoder.SetDTX(e.silkUseDTX)
 	}
 	if e.silkSideEncoder != nil {
 		e.silkSideEncoder.Reset()
 		e.silkSideEncoder.SetReducedDependency(e.predictionDisabled)
+		e.silkSideEncoder.SetDTX(e.silkUseDTX)
 	}
 	if e.celtEncoder != nil {
 		e.celtEncoder.Reset()
@@ -1088,6 +1093,8 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 		return pkt, nil
 	}
 
+	e.updateSILKDTXMode(isSilence)
+
 	framePCM = e.preprocessInputHP(framePCM, frameSize)
 	// Update the SILK variable-HP-cutoff smoother AFTER the Opus-level hp_cutoff
 	// reads variable_HP_smth1_Q15. libopus' hp_cutoff (src/opus_encoder.c) runs
@@ -1234,6 +1241,7 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 	var err error
 	silkBusted := false
 	e.multiFrameDTXCount = 0
+	e.multiFrameSILKDTXCount = 0
 	e.multiFrameLastSubframeDTX = false
 	switch actualMode {
 	case ModeSILK:
@@ -1340,6 +1348,13 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 		e.inputBuffer = e.inputBuffer[:remaining]
 	}
 
+	if !multiFrame && actualMode != ModeCELT && e.silkDTXPacketSuppressed() {
+		e.intMode = actualMode
+		e.intBandwidth = e.bandwidth
+		e.finalRange = 0
+		return e.buildDTXPacketForMode(frameSize, actualMode)
+	}
+
 	// DTX decision (libopus opus_encoder.c:2564-2572): runs decide_dtx_mode AFTER
 	// the frame is fully encoded so the encoder state (SILK NSQ/LPC history, CELT
 	// energy memory) is advanced exactly as libopus does. When DTX fires the
@@ -1359,10 +1374,16 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 	// only taken when DRED is not active; DRED multi-frame packets keep the
 	// whole-frame DTX decision (their own packet builder owns the DTX-refresh
 	// interaction) and so fall through to the else branch.
-	perSubframeDTX := multiFrame && !e.dredEncodingActive()
+	perSubframeDTX := multiFrame && (!e.dredEncodingActive() || e.multiFrameSILKDTXCount > 0)
 	if e.dtxEnabled && e.dtx != nil && perSubframeDTX {
 		subframeCount := e.multiFrameSubframeCount(actualMode, frameSize)
 		if subframeCount > 0 && e.multiFrameDTXCount == subframeCount {
+			if e.multiFrameSILKDTXCount == subframeCount {
+				e.intMode = actualMode
+				e.intBandwidth = e.bandwidth
+				e.finalRange = 0
+				return packet, nil
+			}
 			if isConcreteMode(actualMode) {
 				e.prevPacketMode = actualMode
 			}
@@ -2436,6 +2457,7 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 	}
 	e.silkEncoder.SetComplexity(int(e.complexity))
 	e.silkEncoder.SetReducedDependency(e.predictionDisabled)
+	e.silkEncoder.SetDTX(e.silkUseDTX)
 	if e.channels == 2 {
 		e.ensureSILKSideEncoder()
 		var savedSideLP silk.LPState
@@ -2453,6 +2475,7 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 		}
 		e.silkSideEncoder.SetComplexity(int(e.complexity))
 		e.silkSideEncoder.SetReducedDependency(e.predictionDisabled)
+		e.silkSideEncoder.SetDTX(e.silkUseDTX)
 	}
 	if !preserveLP {
 		e.silkMonoInputHist = [2]float32{}
@@ -3666,6 +3689,7 @@ func (e *Encoder) encodeCELTMultiFramePacket(framePCM []opusRes, vadPCM []opusRe
 		end := start + frameStride
 		subFramePCM := framePCM[start:end]
 		subVADPCM := vadPCM[start:end]
+		e.updateSILKDTXMode(isDigitalSilenceRes(subVADPCM, e.lsbDepth))
 		if dredActive {
 			e.updateOpusVADRes(subVADPCM, f20)
 			e.processDREDLatentsWithActivity(subFramePCM, dredExtraDelay, e.lastOpusVADActive)
@@ -3858,6 +3882,7 @@ func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes,
 		subPCM := pcm[start:end]
 		subCELTPCM := celtPCM[start:end]
 		subVADPCM := vadPCM[start:end]
+		e.updateSILKDTXMode(isDigitalSilenceRes(subVADPCM, e.lsbDepth))
 
 		// Match libopus long-packet cadence: compute DRED activity from the
 		// same per-subframe analysis snapshot used by the primary frame.
@@ -3928,7 +3953,11 @@ func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes,
 		// vadAlreadyComputed=true to avoid re-tracking peak_signal_energy. A
 		// suppressed sub-frame becomes a length-0 frame in the packet; the encode
 		// above already advanced the encoder state.
-		suppressed := !dredActive && e.subframeDTXSuppress(ModeHybrid, subVADPCM, f20, true)
+		internalDTX := e.silkDTXPacketSuppressed()
+		if internalDTX {
+			e.multiFrameSILKDTXCount++
+		}
+		suppressed := internalDTX || (!dredActive && e.subframeDTXSuppress(ModeHybrid, subVADPCM, f20, true))
 		e.multiFrameLastSubframeDTX = suppressed
 		if suppressed {
 			frameCopy = frameCopy[:0]
@@ -4044,6 +4073,7 @@ func (e *Encoder) encodeSILKMultiFramePacket(pcm []opusRes, vadPCM []opusRes, fr
 		end := start + frameStride
 		subPCM := pcm[start:end]
 		subVADPCM := vadPCM[start:end]
+		e.updateSILKDTXMode(isDigitalSilenceRes(subVADPCM, e.lsbDepth))
 
 		e.updateOpusVADRes(subVADPCM, encFrameSize)
 		dredNoDecision := !e.lastOpusVADValid
@@ -4088,13 +4118,13 @@ func (e *Encoder) encodeSILKMultiFramePacket(pcm []opusRes, vadPCM []opusRes, fr
 			e.snapshotDREDPacketState()
 		}
 		frameCopy := e.keepFrame(trimSilkTrailingZeros(frameData))
-		// Per-sub-frame DTX decision (libopus opus_encode_frame_native
-		// decide_dtx_mode). For the default AUDIO application SILK-internal DTX is
-		// off (silk_mode.useDTX = use_dtx && !(analysis_info.valid || is_silence)
-		// == 0 when analysis is valid, opus_encoder.c:1461), so the Opus-level
-		// decision drives suppression here. The Opus-level activity (lastOpusVAD*)
-		// was already computed for this sub-frame by updateOpusVADRes above.
-		suppressed := !dredActive && e.subframeDTXSuppress(ModeSILK, subVADPCM, encFrameSize, true)
+		// SILK owns suppression when analysis is unavailable; otherwise use
+		// the Opus activity computed for this subframe above.
+		internalDTX := e.silkDTXPacketSuppressed()
+		if internalDTX {
+			e.multiFrameSILKDTXCount++
+		}
+		suppressed := internalDTX || (!dredActive && e.subframeDTXSuppress(ModeSILK, subVADPCM, encFrameSize, true))
 		e.multiFrameLastSubframeDTX = suppressed
 		if suppressed {
 			frameCopy = frameCopy[:0]
@@ -4132,6 +4162,7 @@ func (e *Encoder) ensureSILKEncoder() {
 	bw := e.silkBandwidth()
 	if e.silkEncoder != nil && e.silkEncoder.Bandwidth() == bw {
 		e.silkEncoder.SetReducedDependency(e.predictionDisabled)
+		e.silkEncoder.SetDTX(e.silkUseDTX)
 		return
 	}
 	if e.silkEncoder == nil {
@@ -4142,6 +4173,7 @@ func (e *Encoder) ensureSILKEncoder() {
 	}
 	e.silkEncoder.SetComplexity(int(e.complexity))
 	e.silkEncoder.SetReducedDependency(e.predictionDisabled)
+	e.silkEncoder.SetDTX(e.silkUseDTX)
 	// sStereo.sMid belongs to the SILK packet encoder, so a sampling-rate
 	// switch must retain its two-sample history.
 }
@@ -4154,6 +4186,7 @@ func (e *Encoder) ensureSILKSideEncoder() {
 	bw := e.silkBandwidth()
 	if e.silkSideEncoder != nil && e.silkSideEncoder.Bandwidth() == bw {
 		e.silkSideEncoder.SetReducedDependency(e.predictionDisabled)
+		e.silkSideEncoder.SetDTX(e.silkUseDTX)
 		return
 	}
 	if e.silkSideEncoder == nil {
@@ -4163,6 +4196,7 @@ func (e *Encoder) ensureSILKSideEncoder() {
 	}
 	e.silkSideEncoder.SetComplexity(int(e.complexity))
 	e.silkSideEncoder.SetReducedDependency(e.predictionDisabled)
+	e.silkSideEncoder.SetDTX(e.silkUseDTX)
 }
 
 func (e *Encoder) ensureSILKResampler(rate int) {

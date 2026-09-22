@@ -120,6 +120,11 @@ type Encoder struct {
 	bandwidth  Bandwidth
 	sampleRate int32
 
+	// SILK DTX uses a per-VAD-frame counter and a latch reset once per packet.
+	useDTX          bool
+	noSpeechCounter int32
+	inDTX           bool
+
 	// FEC/LBRR (Low Bitrate Redundancy) state
 	// LBRR provides forward error correction by encoding redundant data
 	// for the previous frame at a lower quality in the current packet.
@@ -404,6 +409,8 @@ func NewEncoder(bandwidth Bandwidth) *Encoder {
 
 // Reset clears encoder state for a new stream.
 func (e *Encoder) Reset() {
+	e.noSpeechCounter = 0
+	e.inDTX = false
 	e.packetTermination = nil
 	e.resetFixedState()
 	e.haveEncoded = false
@@ -645,12 +652,61 @@ func (e *Encoder) MarkEncoded() {
 // ResetPacketState resets per-packet encoder state for standalone/shared encoding.
 // This mirrors the standalone EncodeFrame() packet initialization.
 func (e *Encoder) ResetPacketState() {
+	e.inDTX = e.useDTX
+	e.resetFixedDTXPacket()
 	e.nFramesEncoded = 0
 	e.stereoCondMid = nil
 	e.stereoChannelIdx = 0
 	e.stereoPrevDecodeOnlyMiddle = 0
 	e.forceFirstFrameAfterReset = e.reducedDependency
 	e.setupLBRRForNewPacket()
+}
+
+// SetDTX selects SILK-internal DTX for subsequent packets.
+func (e *Encoder) SetDTX(enabled bool) { e.useDTX = enabled }
+
+// InDTX reports whether every encoded VAD frame in this packet permitted DTX.
+func (e *Encoder) InDTX() bool {
+	if e.fixedEncodeActive() {
+		return e.fixedInDTX()
+	}
+	return e.inDTX
+}
+
+// StereoMidOnly reports whether the preceding SILK frame omitted side coding.
+func (e *Encoder) StereoMidOnly() bool { return e.stereo.prevDecodeOnlyMiddle != 0 }
+
+// DTXReady reports the SILK no-speech threshold used by OPUS_GET_IN_DTX.
+// Unlike packet suppression, readiness includes the tenth inactive VAD frame.
+func (e *Encoder) DTXReady() bool {
+	if e.fixedEncodeActive() {
+		return e.fixedDTXReady()
+	}
+	return e.noSpeechCounter >= 10
+}
+
+// advanceDTXVAD follows silk_encode_do_VAD: inactive frames can clear the
+// packet latch, but only the packet boundary may set it again.
+func (e *Encoder) advanceDTXVAD(speechActivityQ8 int32) {
+	if e.fixedEncodeActive() {
+		// Ordinary fixed frames update their existing counter in the fixed VAD.
+		// This bridge is used only by the VAD-only prefill path.
+		e.advanceFixedDTXPrefill(speechActivityQ8)
+		return
+	}
+	if speechActivityQ8 >= speechActivityDTXThresholdQ8 {
+		e.noSpeechCounter = 0
+		e.inDTX = false
+		return
+	}
+	e.noSpeechCounter++
+	if e.noSpeechCounter <= 10 {
+		e.inDTX = false
+	}
+	if e.noSpeechCounter > 30 {
+		e.noSpeechCounter = 10
+		e.inDTX = false
+	}
 }
 
 // Bandwidth returns the current bandwidth setting.

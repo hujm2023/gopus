@@ -430,9 +430,16 @@ func EncodeStereoWithEncoderVADAnalyzersWithSide(
 	// (ec_tell+7)>>3 estimate is the value libopus feeds into the reservoir and
 	// can exceed the flushed buffer length; only the returned slice is clamped.
 	nBytesOut := max((re.Tell()+7)>>3, 0)
+	inDTX := enc.InDTX() && sideEnc.InDTX()
+	if inDTX {
+		nBytesOut = 0
+	}
 
 	// Finalize the range encoder.
-	raw := enc.finalizePacketRange(re)
+	var raw []byte
+	if !inDTX {
+		raw = enc.finalizePacketRange(re)
+	}
 	resultLen := len(raw)
 	// Return a view into the range encoder's own buffer (enc.scratchOutput),
 	// matching the mono finalizeEncodeFrame path. The caller copies the bytes

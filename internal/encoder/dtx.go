@@ -208,6 +208,27 @@ func (e *Encoder) frameSizeMsQ1(frameSize int) int32 {
 	return int32(2 * 1000 * frameSize / fs)
 }
 
+// updateSILKDTXMode selects the native SILK counter when analysis cannot
+// decide activity. Digital silence and valid analysis use Opus-level DTX.
+func (e *Encoder) updateSILKDTXMode(isSilence bool) {
+	e.silkUseDTX = e.dtxEnabled && !(e.lastAnalysisValid || isSilence)
+	if e.silkEncoder != nil {
+		e.silkEncoder.SetDTX(e.silkUseDTX)
+	}
+	if e.silkSideEncoder != nil {
+		e.silkSideEncoder.SetDTX(e.silkUseDTX)
+	}
+	if e.silkUseDTX && e.dtx != nil {
+		e.dtx.noActivityMsQ1 = 0
+		e.dtx.inDTXMode = false
+	}
+}
+
+func (e *Encoder) silkDTXPacketSuppressed() bool {
+	return e.silkUseDTX && e.silkEncoder != nil && e.silkEncoder.InDTX() &&
+		(e.silkInternalChannels() == 1 || (e.silkSideEncoder != nil && e.silkSideEncoder.InDTX()))
+}
+
 // decideDTXSuppress runs libopus decide_dtx_mode (opus_encoder.c:1115-1140),
 // called after the frame has been fully encoded so that the encoder state is
 // advanced exactly as libopus does before discarding the payload for a DTX
@@ -219,7 +240,7 @@ func (e *Encoder) frameSizeMsQ1(frameSize int) int32 {
 //
 // Returns true if the frame should be emitted as a 1-byte TOC-only DTX packet.
 func (e *Encoder) decideDTXSuppress(activity bool, frameSize int) bool {
-	if !e.dtxEnabled || e.dtx == nil {
+	if !e.dtxEnabled || e.dtx == nil || e.silkUseDTX {
 		if e.dtx != nil {
 			e.dtx.noActivityMsQ1 = 0
 			e.dtx.inDTXMode = false
@@ -267,7 +288,7 @@ func (e *Encoder) decideDTXSuppress(activity bool, frameSize int) bool {
 // Returns true when the sub-frame should be emitted as a length-0 (suppressed)
 // frame in the repacketized packet.
 func (e *Encoder) subframeDTXSuppress(mode Mode, subVADPCM []opusRes, subFrameSize int, vadAlreadyComputed bool) bool {
-	if !e.dtxEnabled || e.dtx == nil {
+	if !e.dtxEnabled || e.dtx == nil || e.silkUseDTX {
 		return false
 	}
 	if !vadAlreadyComputed {
@@ -286,6 +307,16 @@ func (e *Encoder) subframeDTXSuppress(mode Mode, subVADPCM []opusRes, subFrameSi
 // InDTX returns whether the encoder is currently in DTX mode.
 // This matches OPUS_GET_IN_DTX from libopus.
 func (e *Encoder) InDTX() bool {
+	if e.silkUseDTX && (e.prevMode == ModeSILK || e.prevMode == ModeHybrid) {
+		if e.silkEncoder == nil || !e.silkEncoder.DTXReady() {
+			return false
+		}
+		midOnly := e.silkEncoder.StereoMidOnly()
+		if e.prevMode == ModeHybrid && e.hybridState != nil {
+			midOnly = e.hybridState.prevDecodeOnlyMiddle
+		}
+		return e.silkInternalChannels() == 1 || midOnly || (e.silkSideEncoder != nil && e.silkSideEncoder.DTXReady())
+	}
 	if !e.dtxEnabled || e.dtx == nil {
 		return false
 	}

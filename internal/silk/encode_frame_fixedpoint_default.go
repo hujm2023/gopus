@@ -53,3 +53,8 @@ func (e *Encoder) FixedLastVADFlag() bool { return false }
 
 // resetStereoSideFixedState is a no-op in the default build.
 func (e *Encoder) resetStereoSideFixedState() {}
+
+func (e *Encoder) resetFixedDTXPacket()           {}
+func (e *Encoder) fixedInDTX() bool               { return false }
+func (e *Encoder) fixedDTXReady() bool            { return false }
+func (e *Encoder) advanceFixedDTXPrefill(_ int32) {}

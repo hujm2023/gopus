@@ -366,6 +366,10 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 		e.silkSideEncoder.SetMaxBits(silkMaxBits)
 	}
 	e.encodeSILKHybrid(silkInput, silkLookahead, frameSize, silkBitrate, silkMaxBits)
+	if e.silkDTXPacketSuppressed() {
+		e.hybridFinalRange = 0
+		return nil, nil
+	}
 
 	// Retrieve SILK signal info for CELT VBR target feedback.
 	// Per libopus opus_encoder.c line 2420-2424: after SILK encodes, its signal
@@ -1320,6 +1324,9 @@ func (e *Encoder) encodeSILKHybridMono(pcm []float32, lookahead []float32, silkS
 	// Match libopus enc_API packet-level nBitsExceeded update for shared range coding.
 	payloadSizeMs := (silkSamples * 1000) / 16000
 	nBytesOut := (re.Tell() + 7) >> 3
+	if e.silkDTXPacketSuppressed() {
+		nBytesOut = 0
+	}
 	e.silkEncoder.UpdatePacketBitsExceeded(nBytesOut, payloadSizeMs, totalRateBps)
 }
 
@@ -1465,6 +1472,9 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 	// Match libopus enc_API packet-level nBitsExceeded update for shared range coding.
 	payloadSizeMs := (silkSamples * 1000) / 16000
 	nBytesOut := (re.Tell() + 7) >> 3
+	if e.silkDTXPacketSuppressed() {
+		nBytesOut = 0
+	}
 	e.silkEncoder.UpdatePacketBitsExceeded(nBytesOut, payloadSizeMs, totalRateBps)
 	if e.silkSideEncoder != nil {
 		e.silkSideEncoder.SetBitsExceeded(e.silkEncoder.BitsExceeded())
