@@ -2726,6 +2726,10 @@ func (e *Encoder) prepareCELTPCM(framePCM []opusRes, frameSize int) []opusRes {
 // sub-frame). The hybrid leg applies the same fade via applyStereoWidthFade;
 // this is the missing CELT-only counterpart.
 func (e *Encoder) applyCELTStereoWidthFade(celtPCM []opusRes, frameSize int) []opusRes {
+	if e.hybridState != nil {
+		celtPCM = e.applyHBGainFade(celtPCM, 1)
+		e.hybridState.prevHBGain = 1
+	}
 	if e.channels != 2 || len(e.celtEnergyMask) > 0 {
 		return celtPCM
 	}
