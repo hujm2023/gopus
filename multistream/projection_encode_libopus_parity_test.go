@@ -353,3 +353,14 @@ func TestProjectionEncodeInt16MatchesLibopus(t *testing.T) {
 		})
 	}
 }
+
+// Projection analysis uses the unmixed input, while high-rate CVBR keeps the
+// per-stream burst allowance even when the complete packet exceeds 1275 bytes.
+func TestProjectionEncodeAnalysisAndCVBRMatchesLibopus(t *testing.T) {
+	libopustest.RequireOracle(t)
+	for _, bitrate := range []int{256000, 384000} {
+		t.Run(fmt.Sprintf("br%d", bitrate), func(t *testing.T) {
+			runProjectionEncodeParity(t, 4, 960, 6, bitrate, 10, 0, true, true)
+		})
+	}
+}

@@ -1124,32 +1124,6 @@ func (e *Encoder) updateSurroundTrimFromPCM(pcm []float32, frameSize int) bool {
 	return true
 }
 
-// multistreamCVBRBoundScale computes a constrained-VBR burst scale that keeps
-// aggregate multistream packet bursts within the Opus 1275-byte packet cap.
-// A scale of 1 keeps libopus single-stream behavior (~2x base burst ceiling).
-func multistreamCVBRBoundScale(totalBitrate, sampleRate, frameSize int) float32 {
-	if totalBitrate <= 0 || sampleRate <= 0 || frameSize <= 0 {
-		return 1.0
-	}
-	targetBytes := (totalBitrate * frameSize) / (8 * sampleRate)
-	if targetBytes <= 0 {
-		return 1.0
-	}
-	const maxPacketBytes = 1275
-	// Reserve a small framing margin for self-delimited multistream headers and
-	// per-stream TOC/entropy tail variance.
-	const framingMarginBytes = 16
-	maxBurstBytes := max(maxPacketBytes-framingMarginBytes, 1)
-	burstMultiple := float32(maxBurstBytes) / float32(targetBytes)
-	if burstMultiple >= 2.0 {
-		return 1.0
-	}
-	if burstMultiple <= 1.0 {
-		return 0.0
-	}
-	return burstMultiple - 1.0
-}
-
 func (e *Encoder) applyPerStreamPolicy(frameSize int, pcm []float32) {
 	rates := e.allocateRates(frameSize)
 	hasSurroundMask := false
@@ -1165,17 +1139,14 @@ func (e *Encoder) applyPerStreamPolicy(frameSize int, pcm []float32) {
 		streamMasks = e.streamEnergyMask[:needed]
 		clear(streamMasks)
 	}
-	cvbrBoundScale := float32(1.0)
-	if len(e.encoders) > 0 && e.encoders[0].GetBitrateMode() == encoder.ModeCVBR {
-		cvbrBoundScale = multistreamCVBRBoundScale(e.totalBitrateForAllocation(frameSize), int(e.sampleRate), frameSize)
-	}
-
 	surroundBandwidth := e.surroundBandwidth(frameSize)
 	for i := 0; i < e.streams; i++ {
 		enc := e.encoders[i]
 		enc.SetAllocatedBitrate(rates[i])
 		enc.SetLFE(i == e.lfeStream)
-		enc.SetCELTCVBRBoundScale(cvbrBoundScale)
+		// Each elementary stream keeps libopus's normal CVBR reservoir bound.
+		// The aggregate packet budget is enforced by currMax during encoding.
+		enc.SetCELTCVBRBoundScale(1)
 		enc.SetCELTPayloadCeilingActive(true)
 
 		switch {
@@ -1406,9 +1377,11 @@ func (e *Encoder) EncodeFloat32WithAnalysisMaxBytes(pcm []float32, frameSize int
 	streamBuffers := e.routeInputToStreams(e.streamInputScratch, pcm, frameSize)
 	e.streamInputScratch = streamBuffers
 	analysisStreamBuffers := streamBuffers
-	if len(analysisPCM) != len(pcm) {
+	if e.mappingFamily == 3 || len(analysisPCM) != len(pcm) {
 		analysisFrameSize := len(analysisPCM) / e.inputChannels
-		analysisStreamBuffers = e.routeInputToStreams(e.analysisInputScratch, analysisPCM, analysisFrameSize)
+		// libopus applies projection mixing only to the coding input. Its
+		// analysis downmix reads the original channels selected by the mapping.
+		analysisStreamBuffers = routeChannelsToStreams(e.analysisInputScratch, analysisPCM, e.mapping, e.coupledStreams, analysisFrameSize, e.inputChannels, e.streams)
 		e.analysisInputScratch = analysisStreamBuffers
 	}
 
