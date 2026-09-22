@@ -71,8 +71,10 @@ func (e *Encoder) computeStereoWidthForMode(pcm []opusRes, frameSize int) opusVa
 		return 0
 	}
 
-	frameRate := max(int(e.sampleRate)/frameSize, 50)
-	shortAlpha := opusVal16(25.0 / opusVal16(frameRate))
+	frameRate := int(e.sampleRate) / frameSize
+	// Only energy smoothing uses a minimum 50 Hz rate. Width smoothing and
+	// peak decay below follow the actual packet duration, including long frames.
+	shortAlpha := opusVal16(25.0 / opusVal16(max(frameRate, 50)))
 
 	// Accumulate per-frame energy and cross-correlation (unrolled by 4).
 	var xx, xy, yy opusVal32
