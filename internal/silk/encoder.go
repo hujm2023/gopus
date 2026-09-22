@@ -486,11 +486,14 @@ func (e *Encoder) Reset() {
 
 // ResetTransitionPrefillState clears the low-level fields that libopus
 // reinitializes during the CELT->SILK/HYBRID prefill reset path, while leaving
-// packet-level controls owned by the Opus wrapper intact.
+// packet-level controls owned by the Opus wrapper intact. Prefill still advances
+// LBRR control history, even for a stereo side channel with no coded samples.
 func (e *Encoder) ResetTransitionPrefillState() {
 	e.lastQuantOffsetType = 0
 	e.frameCounter = 0
 	e.lpState = LPState{}
+	e.setupLBRRForNewPacket()
+	e.finishLBRRPacket()
 }
 
 func resetStereoEncState(st *stereoEncState) {

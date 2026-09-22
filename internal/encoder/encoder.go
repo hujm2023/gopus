@@ -2450,6 +2450,8 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 	} else {
 		e.silkEncoder.Reset()
 	}
+	e.silkEncoder.SetFEC(e.lbrrCoded)
+	e.silkEncoder.SetPacketLoss(int(e.packetLoss))
 	e.silkEncoder.ResetTransitionPrefillState()
 	if preserveLP {
 		// Match libopus prefillFlag==2 semantics: keep LP transition state while
@@ -2466,6 +2468,8 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 		} else {
 			e.silkSideEncoder.Reset()
 		}
+		e.silkSideEncoder.SetFEC(e.lbrrCoded)
+		e.silkSideEncoder.SetPacketLoss(int(e.packetLoss))
 		e.silkSideEncoder.ResetTransitionPrefillState()
 		if preserveLP {
 			e.silkSideEncoder.SetLPState(savedMainLP)
@@ -3189,10 +3193,16 @@ func (e *Encoder) encodeSILKFrameWithDREDAndMax(pcm []opusRes, lookahead []opusR
 				re.EncodeBit(0, 1)
 			}
 			bytes = min(257, max(2, min(bytes, maxBytes-1-(re.Tell()+7)/8)))
+			// SILK redundancy follows the actual internal rate; mediumband uses
+			// the same 17 CELT bands as wideband.
+			redundancyBandwidth := celt.CELTWideband
+			if e.silkBandwidth() == silk.BandwidthNarrowband {
+				redundancyBandwidth = celt.CELTNarrowband
+			}
 			if incomingSwitch {
-				redundancy, e.silkRedundantRange, redundancyErr = e.encodeCELTTransitionRedundancy(celtPCM, frameSize, bytes)
+				redundancy, e.silkRedundantRange, redundancyErr = e.encodeCELTTransitionRedundancy(celtPCM, frameSize, bytes, redundancyBandwidth)
 			} else {
-				redundancy, e.silkRedundantRange, redundancyErr = e.encodeCELTSilkToCELTRedundancy(celtPCM, frameSize, bytes)
+				redundancy, e.silkRedundantRange, redundancyErr = e.encodeCELTSilkToCELTRedundancy(celtPCM, frameSize, bytes, redundancyBandwidth)
 			}
 			e.silkBWSwitch = e.silkSwitchReady && !e.silkNonfinalFrame && len(redundancy) >= 2
 		})

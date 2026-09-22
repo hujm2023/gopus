@@ -34,3 +34,22 @@ func TestStereoPrefillRateIgnoresPriorPacketLayout(t *testing.T) {
 		t.Fatal("prefill calculation changed the pending packet state")
 	}
 }
+
+func TestTransitionPrefillAdvancesLBRRControl(t *testing.T) {
+	e := NewEncoder(BandwidthWideband)
+	e.SetFEC(true)
+	e.SetPacketLoss(20)
+	e.ResetTransitionPrefillState()
+	// No PrefillFrame call: even a mid-only side channel runs the controls.
+	e.ResetPacketState()
+	if e.lbrrGainIncreases != 4 || !e.lbrrLTPRoundLoss {
+		t.Fatalf("post-prefill LBRR gain=%d roundLoss=%v", e.lbrrGainIncreases, e.lbrrLTPRoundLoss)
+	}
+	e.SetFEC(false)
+	e.ResetTransitionPrefillState()
+	e.SetFEC(true)
+	e.ResetPacketState()
+	if e.lbrrGainIncreases != 7 || e.lbrrLTPRoundLoss {
+		t.Fatalf("disabled prefill retained LBRR history: gain=%d roundLoss=%v", e.lbrrGainIncreases, e.lbrrLTPRoundLoss)
+	}
+}

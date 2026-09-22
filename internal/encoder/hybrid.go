@@ -411,7 +411,7 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 				if e.channels == 2 && len(e.celtEnergyMask) == 0 {
 					redundancyPCM = e.applyStereoWidthFade(redundancyPCM, e.hybridState.stereoWidthQ14, targetWidthQ14)
 				}
-				data, rng, err := e.encodeCELTTransitionRedundancy(redundancyPCM, frameSize, redundancyBytes)
+				data, rng, err := e.encodeCELTTransitionRedundancy(redundancyPCM, frameSize, redundancyBytes, celtBandwidthFromTypes(e.effectiveBandwidth()))
 				if err != nil {
 					return nil, err
 				}
@@ -531,7 +531,7 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 	}
 	if transitionSilkToCELT {
 		var err error
-		redundancyData, redundantRng, err = e.encodeCELTSilkToCELTRedundancy(celtInput, frameSize, redundancyBytes)
+		redundancyData, redundantRng, err = e.encodeCELTSilkToCELTRedundancy(celtInput, frameSize, redundancyBytes, celtBandwidthFromTypes(e.effectiveBandwidth()))
 		if err != nil {
 			return nil, err
 		}
@@ -608,7 +608,7 @@ func clampRedundancyBytesAfterSilk(maxDataBytes, tellBits, redundancyBytes int, 
 
 // encodeCELTTransitionRedundancy encodes the 5ms CELT redundancy frame used for
 // CELT->SILK/Hybrid transitions.
-func (e *Encoder) encodeCELTTransitionRedundancy(celtPCM []opusRes, frameSize, redundancyBytes int) ([]byte, uint32, error) {
+func (e *Encoder) encodeCELTTransitionRedundancy(celtPCM []opusRes, frameSize, redundancyBytes int, bandwidth celt.CELTBandwidth) ([]byte, uint32, error) {
 	if redundancyBytes < 2 || frameSize <= 0 {
 		return nil, 0, nil
 	}
@@ -633,7 +633,7 @@ func (e *Encoder) encodeCELTTransitionRedundancy(celtPCM []opusRes, frameSize, r
 	e.celtEncoder.SetBitrate(CELTMaxBitrate)
 	e.celtEncoder.SetVBR(false)
 	e.celtEncoder.SetConstrainedVBR(false)
-	e.celtEncoder.SetBandwidth(celtBandwidthFromTypes(e.effectiveBandwidth()))
+	e.celtEncoder.SetBandwidth(bandwidth)
 	e.celtEncoder.SetLSBDepth(int(e.lsbDepth))
 	e.celtEncoder.SetDCRejectEnabled(false)
 	e.celtEncoder.SetMaxPayloadBytes(redundancyBytes)
@@ -659,7 +659,7 @@ func (e *Encoder) encodeCELTTransitionRedundancy(celtPCM []opusRes, frameSize, r
 // encodeCELTSilkToCELTRedundancy matches libopus SILK/Hybrid->CELT transition
 // redundancy: reset CELT, prefill with 2.5 ms from the frame tail, then encode a
 // 5 ms redundant CELT frame from the end of the current frame.
-func (e *Encoder) encodeCELTSilkToCELTRedundancy(celtPCM []opusRes, frameSize, redundancyBytes int) ([]byte, uint32, error) {
+func (e *Encoder) encodeCELTSilkToCELTRedundancy(celtPCM []opusRes, frameSize, redundancyBytes int, bandwidth celt.CELTBandwidth) ([]byte, uint32, error) {
 	if redundancyBytes < 2 || frameSize <= 0 {
 		return nil, 0, nil
 	}
@@ -695,7 +695,7 @@ func (e *Encoder) encodeCELTSilkToCELTRedundancy(celtPCM []opusRes, frameSize, r
 	e.celtEncoder.SetVBR(false)
 	e.celtEncoder.SetConstrainedVBR(false)
 	e.celtEncoder.SetBitrate(CELTMaxBitrate)
-	e.celtEncoder.SetBandwidth(celtBandwidthFromTypes(e.effectiveBandwidth()))
+	e.celtEncoder.SetBandwidth(bandwidth)
 	e.celtEncoder.SetLSBDepth(int(e.lsbDepth))
 	e.celtEncoder.SetDCRejectEnabled(false)
 
