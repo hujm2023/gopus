@@ -622,7 +622,21 @@ func (e *Encoder) encodeCELTTransitionRedundancy(celtPCM []opusRes, frameSize, r
 		return nil, 0, nil
 	}
 
+	// libopus only pushes CELT_SET_PREDICTION for the current frame when
+	// st->mode != MODE_SILK_ONLY (opus_encoder.c CELT_SET_PREDICTION(celt_pred)
+	// before the CELT->SILK redundancy). A SILK-only frame therefore generates
+	// its incoming redundancy with whatever prediction the CELT encoder still
+	// carries, which is the 0 left behind by a previous SILK->CELT redundancy or
+	// mode-change prefill. ensureCELTEncoder re-syncs prediction to the
+	// configured default, so keep the value that was in effect before the call.
+	// (The Hybrid caller already re-synced prediction to the default, so this is
+	// a no-op there.)
+	prediction := e.celtPredictionMode()
+	if e.celtEncoder != nil {
+		prediction = e.celtEncoder.Prediction()
+	}
 	e.ensureCELTEncoder()
+	e.celtEncoder.SetPrediction(prediction)
 	// The transition-redundancy CELT frame is a fixed 48 kHz-relative block, so it
 	// uses no input upsampling regardless of the API rate.
 	e.celtEncoder.SetUpsample(1)
