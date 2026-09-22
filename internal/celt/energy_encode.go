@@ -39,9 +39,9 @@ func (e *Encoder) ComputeBandEnergies(mdctCoeffs []float32, nbBands, frameSize i
 // ComputeBandEnergiesF32 computes CELT band energies from float-build MDCT
 // coefficients and returns the encoder scratch view.
 func (e *Encoder) ComputeBandEnergiesF32(mdctCoeffs []float32, nbBands, frameSize int) []celtGLog {
-	energiesLen := nbBands * int(e.channels)
-	dst := ensureGLogSlice(&e.scratch.energies, energiesLen)
-	e.ComputeBandEnergiesF32Into(mdctCoeffs, nbBands, frameSize, dst)
+	channels := e.codedChannels()
+	dst := ensureGLogSlice(&e.scratch.energies, nbBands*channels)
+	e.computeBandEnergiesGLogActive(mdctCoeffs, nbBands, frameSize, channels, 1<<GetModeConfig(frameSize).LM, dst)
 	return dst
 }
 

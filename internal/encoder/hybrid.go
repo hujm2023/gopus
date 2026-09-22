@@ -451,6 +451,21 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 		if e.hybridState != nil {
 			targetWidthQ14 = min(max(e.hybridState.silkStereoWidthQ14, 0), 16384)
 		}
+		if e.celtInternalChannelsForMode(ModeHybrid) == 1 {
+			// A mono-coded Hybrid stream uses the rate-derived width before
+			// physical-channel transient analysis, just like CELT-only mode.
+			frameRate := int32(int(e.sampleRate) / frameSize)
+			equivRate := e.computeEquivRate(e.bitrate, int32(e.streamChannels), frameRate, e.bitrateMode != ModeCBR, ModeHybrid, e.complexity, e.packetLoss)
+			switch {
+			case equivRate > 32000:
+				targetWidthQ14 = 16384
+			case equivRate < 16000:
+				targetWidthQ14 = 0
+			default:
+				targetWidthQ14 = int16(16384 - 2048*(32000-equivRate)/(equivRate-14000))
+			}
+			e.hybridState.silkStereoWidthQ14 = targetWidthQ14
+		}
 		if e.hybridState.stereoWidthQ14 < (1<<14) || targetWidthQ14 < (1<<14) {
 			celtInput = e.applyStereoWidthFade(celtInput, e.hybridState.stereoWidthQ14, targetWidthQ14)
 		}
@@ -1542,8 +1557,9 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 	}
 	nbBands := end
 	overlap := min(celt.Overlap, frameSize)
-	channels := int(e.channels)
-	mdctHistLen := overlap * channels
+	inputChannels := int(e.channels)
+	channels := e.celtEncoder.StreamChannels()
+	mdctHistLen := overlap * inputChannels
 	mdctHistory := e.hybridState.scratchMDCTHist
 	if cap(mdctHistory) < mdctHistLen {
 		mdctHistory = make([]float32, mdctHistLen)
@@ -1584,11 +1600,11 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 
 	// Compute MDCT with overlap history using the selected block size.
 
-	mdctCoeffs := computeMDCTForHybridScratch(preemph, frameSize, channels, mdctHistory, shortBlocks, e.hybridState, e.celtEncoder)
+	mdctCoeffs := computeMDCTForHybridScratch(preemph, frameSize, inputChannels, mdctHistory, shortBlocks, e.hybridState, e.celtEncoder)
 	if len(mdctCoeffs) == 0 {
 		return
 	}
-	e.celtEncoder.ScaleHybridMDCT(mdctCoeffs, frameSize)
+	mdctCoeffs = e.celtEncoder.PrepareHybridMDCT(mdctCoeffs, frameSize)
 	// Keep float-path cadence aligned with libopus (opus_res/celt_sig are float).
 
 	// Compute band energies
@@ -1616,7 +1632,7 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 	// Normalize bands to arrays (linear amplitudes) for PVQ input.
 	var normL, normR []celt.CeltNorm
 	var bandE []celt.CeltEner
-	if e.channels == 1 {
+	if channels == 1 {
 		normL, bandE = e.celtEncoder.NormalizeBandsToArrayMonoWithBandEF32(mdctCoeffs, nbBands, frameSize)
 	} else {
 		if len(mdctCoeffs) < frameSize*2 {
@@ -1914,6 +1930,9 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 			}
 		}
 	}
+	if inputChannels == 2 && channels == 1 {
+		copy(nextEnergy[celt.MaxBands:], nextEnergy[:celt.MaxBands])
+	}
 	e.celtEncoder.SetPrevEnergyWithPrevFloat32(prevEnergy, nextEnergy)
 	e.celtEncoder.SetRNG(re.Range())
 	e.celtEncoder.IncrementFrameCount()
@@ -1929,9 +1948,8 @@ func (e *Encoder) computeHybridCELTVBRTargetBytes(limitBytes, frameSize int, tfE
 
 	// Per libopus celt_encoder.c compute_vbr / celt_encode_with_ec line 2450:
 	// base_target = IMAX(0, vbr_rate - ((9*C+4)<<BITRES)) for hybrid, where C is the
-	// CELT stream channel count. This holds regardless of any SILK stereo-width
-	// collapse: CELT still codes its high band in stereo (stream_channels stays 2 in
-	// hybrid), so the per-channel overhead is unchanged.
+	// CELT coded channel count. A SILK stereo-width collapse alone leaves two
+	// coded channels; a top-level mono stream decision reduces this count to one.
 	vbrRateQ3 := e.celtEncoder.BitrateToBits(frameSize) << celt.BitRes
 	channels := int(e.celtInternalChannelsForMode(ModeHybrid))
 	baseTargetQ3 := vbrRateQ3 - ((9*channels + 4) << celt.BitRes)

@@ -340,7 +340,7 @@ func (e *Encoder) StabilizeEnergiesBeforeCoarseHybrid(energies []celtGLog, start
 	if nbBands > MaxBands {
 		nbBands = MaxBands
 	}
-	channels := int(e.channels)
+	channels := e.codedChannels()
 	for c := range channels {
 		baseState := c * MaxBands
 		baseFrame := c * nbBands
@@ -435,7 +435,7 @@ func (e *Encoder) UpdateEnergyErrorHybridFromError(start, end, nbBands int) {
 		return
 	}
 
-	channels := max(int(e.channels), 1)
+	channels := e.codedChannels()
 	errorVals := ensureGLogSliceNoClear(&e.scratch.coarseError, nbBands*channels)
 
 	for c := range channels {
@@ -503,12 +503,23 @@ func (e *Encoder) ScaleHybridMDCT(coeffs []float32, frameSize int) {
 	}
 }
 
+// PrepareHybridMDCT folds physical stereo spectra to a coded mono spectrum,
+// then applies native-rate scaling in libopus compute_mdcts order.
+func (e *Encoder) PrepareHybridMDCT(coeffs []float32, frameSize int) []float32 {
+	if e.channels == 2 && e.codedChannels() == 1 {
+		coeffs = foldStereoMDCTToMonoF32(coeffs, coeffs[:frameSize], coeffs[frameSize:2*frameSize])
+	}
+	e.ScaleHybridMDCT(coeffs, frameSize)
+	return coeffs
+}
+
 // TransientAnalysisHybrid performs transient analysis and updates preemph overlap state.
 // Returns transient flags, tf/tone metrics, shortBlocks choice, and optional bandLogE2.
 func (e *Encoder) TransientAnalysisHybrid(preemph []float32, frameSize, nbBands, lm int, allowWeakTransients bool) (transient bool, weakTransient bool, tfEstimate, toneFreq, toneishness float32, shortBlocks int, bandLogE2 []celtGLog) {
 	overlap := min(Overlap, frameSize)
 
 	channels := int(e.channels)
+	codedChannels := e.codedChannels()
 	preemphBufSize := overlap * channels
 	transientLen := (overlap + frameSize) * channels
 
@@ -573,9 +584,9 @@ func (e *Encoder) TransientAnalysisHybrid(preemph []float32, frameSize, nbBands,
 		hist = hist[:overlap]
 		copySigToFloat32(hist, e.overlapBuffer[:overlap])
 		mdctLong := computeMDCTWithHistoryScratch(preemph, hist, 1, &e.scratch)
-		bandLogE2 = ensureGLogSlice(&e.scratch.bandLogE2, nbBands*channels)
-		e.ScaleHybridMDCT(mdctLong, frameSize)
-		computeBandEnergiesGLogF32Into(mdctLong, nbBands, frameSize, channels, 1<<lm, bandLogE2)
+		bandLogE2 = ensureGLogSlice(&e.scratch.bandLogE2, nbBands*codedChannels)
+		mdctLong = e.PrepareHybridMDCT(mdctLong, frameSize)
+		computeBandEnergiesGLogF32Into(mdctLong, nbBands, frameSize, codedChannels, 1<<lm, bandLogE2)
 	} else {
 		left, right := deinterleaveStereoScratchF32(preemph, &e.scratch.deintLeft, &e.scratch.deintRight)
 		if len(e.overlapBuffer) < 2*overlap {
@@ -610,9 +621,9 @@ func (e *Encoder) TransientAnalysisHybrid(preemph []float32, frameSize, nbBands,
 		mdctLong = mdctLong[:mdctLongLen]
 		copy(mdctLong, mdctLeftLong)
 		copy(mdctLong[len(mdctLeftLong):], mdctRightLong)
-		bandLogE2 = ensureGLogSlice(&e.scratch.bandLogE2, nbBands*channels)
-		e.ScaleHybridMDCT(mdctLong, frameSize)
-		computeBandEnergiesGLogF32Into(mdctLong, nbBands, frameSize, channels, 1<<lm, bandLogE2)
+		bandLogE2 = ensureGLogSlice(&e.scratch.bandLogE2, nbBands*codedChannels)
+		mdctLong = e.PrepareHybridMDCT(mdctLong, frameSize)
+		computeBandEnergiesGLogF32Into(mdctLong, nbBands, frameSize, codedChannels, 1<<lm, bandLogE2)
 	}
 
 	if bandLogE2 != nil {
@@ -657,7 +668,7 @@ func (e *Encoder) DynallocAnalysisHybridScratch(bandLogE, bandLogE2 []celtGLog, 
 		nbBands,
 		start,
 		end,
-		int(e.channels),
+		e.codedChannels(),
 		lsbDepth,
 		lm,
 		logN,
