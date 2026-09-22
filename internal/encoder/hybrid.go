@@ -522,7 +522,7 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 	if useFinalHybridVBRTarget {
 		hybridCELTTargetBytes = maxTargetBytes
 	}
-	e.encodeCELTHybridImproved(celtInput, frameSize, hybridCELTTargetBytes, silkSignalType, silkOffset, useFinalHybridVBRTarget, !useFinalHybridVBRTarget && maxPacketBytes == 0, dredCarrier)
+	e.encodeCELTHybridImproved(celtInput, frameSize, hybridCELTTargetBytes, useFinalHybridVBRTarget, !useFinalHybridVBRTarget && maxPacketBytes == 0, dredCarrier)
 	mainRng := e.celtEncoder.FinalRange()
 
 	// Update state for next frame
@@ -1460,13 +1460,12 @@ func celtBandwidthFromTypes(bw types.Bandwidth) celt.CELTBandwidth {
 // encodeCELTHybridImproved encodes CELT data for hybrid mode with improvements.
 // Implements proper energy matching at the crossover frequency.
 // targetPayloadBytes is the desired total payload budget (excluding TOC) for the full packet.
-// silkSignalType and silkOffset are the SILK encoder's signal classification,
-// used for VBR target adjustment per libopus celt_encoder.c line 2463-2475.
-func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetPayloadBytes int, silkSignalType, silkOffset int, useFinalVBRTarget, useInitialVBRAdjust, dredCarrier bool) {
+// SILK side information is read after transition resets, matching CELT state.
+func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetPayloadBytes int, useFinalVBRTarget, useInitialVBRAdjust, dredCarrier bool) {
 	// Set hybrid mode flag on CELT encoder
 	e.celtEncoder.SetHybrid(true)
 	e.celtEncoder.SetStreamChannels(e.celtInternalChannelsForMode(ModeHybrid))
-	e.celtEncoder.SetSilkInfo(silkSignalType, silkOffset)
+	silkSignalType, silkOffset := e.celtEncoder.SilkInfo()
 	e.celtEncoder.SetPrediction(e.celtPredictionModeForFrame())
 
 	pcm, frameSize = e.celtEncoder.PrepareHybridPCM(pcm, frameSize)

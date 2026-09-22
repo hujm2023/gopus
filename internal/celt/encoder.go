@@ -413,6 +413,8 @@ func (e *Encoder) dynallocLeakBoost() []uint8 {
 // Reset clears encoder state for a new stream.
 // Call this when starting to encode a new audio stream.
 func (e *Encoder) Reset() {
+	e.silkSignalType = 0
+	e.silkOffset = 0
 	// Clear energy arrays (match libopus reset: oldBandE=0).
 	for i := range e.prevEnergy {
 		e.prevEnergy[i] = 0
@@ -1071,6 +1073,11 @@ func (e *Encoder) IsHybrid() bool {
 func (e *Encoder) SetSilkInfo(signalType, offset int) {
 	e.silkSignalType = signalType
 	e.silkOffset = offset
+}
+
+// SilkInfo returns side information after any CELT state reset.
+func (e *Encoder) SilkInfo() (signalType, offset int) {
+	return e.silkSignalType, e.silkOffset
 }
 
 // FillHybridTFResolution applies the libopus hybrid fixed-TF fallback used when
