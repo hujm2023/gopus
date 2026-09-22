@@ -3133,6 +3133,9 @@ func (e *Encoder) encodeSILKFrameWithDREDAndMax(pcm []opusRes, lookahead []opusR
 		e.runPendingSilkTransitionPrefill(true, false, e.silkInputBitrate(frameSize))
 	}
 	e.ensureSILKEncoder()
+	// Standalone SILK owns a new packet coder, including after Hybrid left
+	// its shared coder attached to the persistent SILK state.
+	e.silkEncoder.SetRangeEncoder(nil)
 	e.silkBWSwitch = false
 	e.silkRedundancyBytes = 0
 	maxBytes := maxPacketBytes
