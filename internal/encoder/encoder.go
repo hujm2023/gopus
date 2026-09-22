@@ -93,7 +93,7 @@ var (
 )
 
 const (
-	defaultScratchPacketBytes   = maxSilkPacketBytes
+	defaultScratchPacketBytes   = maxSilkPacketBytes + 1 // Maximum frame payload plus TOC.
 	extensionScratchPacketBytes = 3826
 )
 
@@ -274,6 +274,7 @@ type Encoder struct {
 	silkResampler       *silk.LibopusResampler
 	silkResamplerRight  *silk.LibopusResampler
 	silkResamplerRate   int32
+	silkMaxInternalRate int
 	silkResampled       []float32
 	silkResampledR      []float32
 	silkResampledBuffer []float32
@@ -575,6 +576,7 @@ func (e *Encoder) Reset() {
 		e.celtEnergyMask = e.celtEnergyMask[:0]
 	}
 	e.silkMonoInputHist = [2]float32{}
+	e.silkMaxInternalRate = 0
 	e.resetFECState()
 	if e.dtx != nil {
 		e.dtx.reset()
@@ -1121,6 +1123,21 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 	}
 	actualMode, prevModeNext := e.applyCELTTransitionDelay(frameSize, requestedMode)
 	transitionToCELT := requestedMode == ModeCELT && actualMode != ModeCELT
+	e.silkMaxInternalRate = 16000
+	if actualMode == ModeSILK {
+		// opus_encoder.c limits SILK's internal rate separately from the
+		// requested bandwidth when the packet cannot carry the wider signal.
+		maxRate := e.maxRateForFrame(frameSize, cbrMaxDataBytes)
+		if sampleRate/frameSize > 50 {
+			maxRate = maxRate * 2 / 3
+		}
+		if maxRate < 8000 {
+			e.silkMaxInternalRate = 12000
+		}
+		if maxRate < 7000 {
+			e.silkMaxInternalRate = 8000
+		}
+	}
 
 	dredExtraDelay := 0
 	if !e.lowDelay {
@@ -1374,8 +1391,8 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 	if packet == nil {
 		stereo := e.packetStereoForMode(actualMode)
 		packetBW := e.effectiveBandwidth()
-		if actualMode == ModeSILK && packetBW > types.BandwidthWideband {
-			packetBW = types.BandwidthWideband
+		if actualMode == ModeSILK {
+			packetBW = types.Bandwidth(e.silkBandwidth())
 		}
 		// The TOC config table indexes by the 48 kHz-equivalent frame size
 		// (libopus gen_toc derives the period from Fs/frame_size, which is the
@@ -1466,8 +1483,8 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 		if len(qextPayload) > 0 && len(packet) < targetSize {
 			stereo := e.packetStereoForMode(actualMode)
 			packetBW := e.effectiveBandwidth()
-			if actualMode == ModeSILK && packetBW > types.BandwidthWideband {
-				packetBW = types.BandwidthWideband
+			if actualMode == ModeSILK {
+				packetBW = types.Bandwidth(e.silkBandwidth())
 			}
 			packetLen, pktErr := buildPacketWithSingleExtensionInto(
 				e.scratchPacket,
@@ -1666,8 +1683,8 @@ func (e *Encoder) buildDTXPacket(frameSize int) ([]byte, error) {
 // sub-frames, code 3 for three).
 func (e *Encoder) buildDTXPacketForMode(frameSize int, actualMode Mode) ([]byte, error) {
 	packetBW := e.effectiveBandwidth()
-	if actualMode == ModeSILK && packetBW > types.BandwidthWideband {
-		packetBW = types.BandwidthWideband
+	if actualMode == ModeSILK {
+		packetBW = types.Bandwidth(e.silkBandwidth())
 	}
 	stereo := e.packetStereoForMode(actualMode)
 	mode := modeToTypes(actualMode)
@@ -3440,7 +3457,7 @@ func (e *Encoder) resetPacketFrameScratch() {
 }
 
 // ensurePacketScratch grows the assembled-packet buffer so a multi-frame packet
-// up to n bytes fits. The default buffer holds a single 1275-byte Opus packet,
+// up to n bytes fits. The default buffer holds a 1275-byte frame plus its TOC,
 // but a long CELT/SILK/Hybrid packet at a high bitrate (e.g. 120 ms at 128 kb/s,
 // ~1920 bytes) needs the caller's larger out_data_bytes budget, exactly as
 // libopus assembles into the caller's buffer.
@@ -3977,7 +3994,7 @@ func (e *Encoder) encodeSILKMultiFramePacket(pcm []opusRes, vadPCM []opusRes, fr
 	e.bitrate = savedBitrate
 	e.analysisReadBakSet = false
 
-	packetBW := min(e.effectiveBandwidth(), types.BandwidthWideband)
+	packetBW := types.Bandwidth(e.silkBandwidth())
 	if e.dredEncodingActive() {
 		if dredPacket, ok, err := e.maybeBuildMultiFrameDREDPacket(frames, ModeSILK, packetBW, frameSize, encFrameSize48k, firstFrameMaxBytes, e.packetStereoForMode(ModeSILK), !sameSize, nil); err != nil {
 			return nil, err
@@ -4415,7 +4432,13 @@ func (e *Encoder) ensureCELTEncoder() {
 
 // silkBandwidth converts the Opus bandwidth to SILK bandwidth.
 func (e *Encoder) silkBandwidth() silk.Bandwidth {
-	switch e.effectiveBandwidth() {
+	bandwidth := e.effectiveBandwidth()
+	if e.silkMaxInternalRate == 8000 {
+		bandwidth = types.BandwidthNarrowband
+	} else if e.silkMaxInternalRate == 12000 {
+		bandwidth = min(bandwidth, types.BandwidthMediumband)
+	}
+	switch bandwidth {
 	case types.BandwidthNarrowband:
 		return silk.BandwidthNarrowband
 	case types.BandwidthMediumband:
