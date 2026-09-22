@@ -979,6 +979,18 @@ func (e *Encoder) SetFramesPerPacket(n int) {
 	e.nFramesPerPacket = int32(n)
 }
 
+// SetStereoMidOnly records the current frame's mid-only (side not coded) decision.
+// libopus keeps this in the single psEnc->prev_decode_only_middle field, which both
+// the SILK-only and the Hybrid stereo legs read on the next frame to decide the side
+// channel's re-entry reset and conditional coding.
+func (e *Encoder) SetStereoMidOnly(midOnly bool) {
+	if midOnly {
+		e.stereo.prevDecodeOnlyMiddle = 1
+	} else {
+		e.stereo.prevDecodeOnlyMiddle = 0
+	}
+}
+
 // NFramesEncoded reports how many internal SILK frames of the current packet have
 // been encoded. libopus selects stereo condCoding from this value, so the Opus-level
 // Hybrid leg reads it to mirror enc_API.c.

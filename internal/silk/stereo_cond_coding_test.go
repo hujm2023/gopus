@@ -51,3 +51,22 @@ func TestSetStereoCondContextPinsChannelContext(t *testing.T) {
 		t.Fatal("ResetPacketState must clear the stereo condCoding context")
 	}
 }
+
+// TestSetStereoMidOnlyIsSharedAcrossStereoLegs pins the libopus single-field
+// contract: psEnc->prev_decode_only_middle is written by whichever stereo leg
+// coded the frame, so a SILK-only mid-only frame is visible to the next Hybrid
+// frame (which must reset the side channel before coding it again).
+func TestSetStereoMidOnlyIsSharedAcrossStereoLegs(t *testing.T) {
+	e := NewEncoder(BandwidthWideband)
+	if e.StereoMidOnly() {
+		t.Fatal("a fresh encoder must not report a previous mid-only frame")
+	}
+	e.SetStereoMidOnly(true)
+	if !e.StereoMidOnly() {
+		t.Fatal("SetStereoMidOnly(true) must be visible to StereoMidOnly")
+	}
+	e.SetStereoMidOnly(false)
+	if e.StereoMidOnly() {
+		t.Fatal("SetStereoMidOnly(false) must clear the mid-only state")
+	}
+}

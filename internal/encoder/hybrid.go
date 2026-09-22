@@ -1482,7 +1482,7 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 	// block start, so the mid channel of the first internal frame codes
 	// independently and later frames (and the side channel) code conditionally.
 	prevDecodeOnlyMiddle := 0
-	if e.hybridState != nil && e.hybridState.prevDecodeOnlyMiddle {
+	if e.silkEncoder.StereoMidOnly() {
 		prevDecodeOnlyMiddle = 1
 	}
 	e.silkEncoder.SetStereoCondContext(e.silkEncoder, int(e.silkEncoder.NFramesEncoded()), 0, prevDecodeOnlyMiddle)
@@ -1490,7 +1490,7 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 
 	// 5. Encode Side Frame (skip if mid-only)
 	if e.silkSideEncoder != nil && !midOnly {
-		if e.hybridState != nil && e.hybridState.prevDecodeOnlyMiddle {
+		if prevDecodeOnlyMiddle == 1 {
 			e.silkSideEncoder.ResetStereoSideAfterMidOnly()
 		}
 		e.silkSideEncoder.SetStereoCondContext(e.silkEncoder, int(e.silkEncoder.NFramesEncoded()), 1, prevDecodeOnlyMiddle)
@@ -1526,6 +1526,9 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 		e.silkSideEncoder.SetBitsExceeded(e.silkEncoder.BitsExceeded())
 	}
 
+	// libopus stores the mid-only decision in the shared SILK encoder state so the
+	// next frame of either stereo leg (SILK-only or Hybrid) sees it.
+	e.silkEncoder.SetStereoMidOnly(midOnly)
 	if e.hybridState != nil {
 		e.hybridState.prevDecodeOnlyMiddle = midOnly
 	}
