@@ -1170,7 +1170,7 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 		re.EncodeICDF(allocTrim, trimICDF, 7)
 	}
 	if e.vbr {
-		targetBytes = e.computeFinalVBRTargetBytes(frameSize, tfEstimate, e.lastPitchChange, re.TellFrac(), totalBoost, targetBytes)
+		targetBytes = e.computeFinalVBRTargetBytes(frameSize, tfEstimate, e.lastPitchChange, re.TellFrac(), totalBoost, targetBytes, equivRate)
 		targetBits = targetBytes * 8
 		e.frameBits = int32(targetBits)
 		re.Shrink(uint32(targetBytes))
@@ -1198,7 +1198,7 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 			initialQextBytes := max(targetBytes-1275, max(0, (targetBytes-offsetBytes)*4/5))
 			overheadQ3 := (40*codedChannels + 20) << bitRes
 			baseQ3 := max((targetBytes-initialQextBytes/3)*8<<bitRes-overheadQ3, 0)
-			vbrQ3 := e.computeVBRTarget(baseQ3, frameSize, tf2, e.lastPitchChange)
+			vbrQ3 := e.computeVBRTargetWithBoost(baseQ3, frameSize, tf2, e.lastPitchChange, e.lastDynalloc.TotBoost, equivRate)
 			vbrQ3 += re.TellFrac()
 			cbrVBRTargetBytes = max((vbrQ3+(1<<(bitRes+2)))>>(bitRes+3), 0)
 		}
@@ -2140,7 +2140,7 @@ func (e *Encoder) computeInitialTargetBytes(frameSize int) int {
 	return targetBytes
 }
 
-func (e *Encoder) computeFinalVBRTargetBytes(frameSize int, tfEstimate float32, pitchChange bool, tellFrac, totalBoost, limitBytes int) int {
+func (e *Encoder) computeFinalVBRTargetBytes(frameSize int, tfEstimate float32, pitchChange bool, tellFrac, totalBoost, limitBytes, equivRate int) int {
 	mode := e.modeConfig(frameSize)
 	lm := mode.LM
 	lmDiff := max(3-lm, 0)
@@ -2175,7 +2175,7 @@ func (e *Encoder) computeFinalVBRTargetBytes(frameSize int, tfEstimate float32, 
 			}
 		}
 	} else {
-		targetQ3 = e.computeVBRTarget(baseTargetQ3, frameSize, tfEstimate, pitchChange)
+		targetQ3 = e.computeVBRTargetWithBoost(baseTargetQ3, frameSize, tfEstimate, pitchChange, e.lastDynalloc.TotBoost, equivRate)
 	}
 	targetQ3 += tellFrac
 
@@ -2366,10 +2366,15 @@ func (e *Encoder) computeTargetBits(frameSize int, tfEstimate float32, pitchChan
 
 // computeVBRTarget applies libopus-style CELT VBR shaping in Q3 units.
 func (e *Encoder) computeVBRTarget(baseTargetQ3, frameSize int, tfEstimate float32, pitchChange bool) int {
-	return e.computeVBRTargetWithBoost(baseTargetQ3, frameSize, tfEstimate, pitchChange, e.lastDynalloc.TotBoost)
+	capBytes := e.cbrPayloadBytes(frameSize)
+	if e.vbr {
+		capBytes = e.vbrMaxPayloadBytes(frameSize)
+	}
+	equivRate := ComputeEquivRate(capBytes, e.codedChannels(), e.modeConfig(frameSize).LM, int(e.targetBitrate))
+	return e.computeVBRTargetWithBoost(baseTargetQ3, frameSize, tfEstimate, pitchChange, e.lastDynalloc.TotBoost, equivRate)
 }
 
-func (e *Encoder) computeVBRTargetWithBoost(baseTargetQ3, frameSize int, tfEstimate float32, pitchChange bool, totalBoost int) int {
+func (e *Encoder) computeVBRTargetWithBoost(baseTargetQ3, frameSize int, tfEstimate float32, pitchChange bool, totalBoost, equivRate int) int {
 	mode := e.modeConfig(frameSize)
 	lm := mode.LM
 	nbBands := e.effectiveBandCount(frameSize)
@@ -2499,8 +2504,9 @@ func (e *Encoder) computeVBRTargetWithBoost(baseTargetQ3, frameSize int, tfEstim
 	// Reference: libopus celt_encoder.c lines 1703-1710.
 	// In float domain: target += temporal_vbr * 0.0000031 * clamp(96000-bitrate,0,32000) * target
 	if len(e.energyMask) == 0 && tfEstimate < 0.2 {
-		bitrate := e.bitrateToBits(frameSize) * (e.celtModeFs() / frameSize) // approximate bps
-		clampedBR := min(max(96000-bitrate, 0), 32000)
+		// compute_vbr receives equiv_rate, including short-frame overhead and
+		// the current output-buffer cap, rather than the configured bitrate.
+		clampedBR := min(max(96000-equivRate, 0), 32000)
 		amount := float32(0.0000031) * float32(clampedBR)
 		targetQ3 += int(float32(e.lastTemporalVBR) * amount * float32(targetQ3))
 	}

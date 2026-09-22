@@ -94,7 +94,7 @@ func TestLFEVBRUsesAnalysisBoost(t *testing.T) {
 	enc.lastDynalloc.MaxDepth = 20.167902
 	// libopus's LFE analysis boost is zero even when coding band zero
 	// consumes 288 Q3 boost bits. Those bits affect only the minimum size.
-	enc.computeFinalVBRTargetBytes(960, 0, false, 395, 288, 40)
+	enc.computeFinalVBRTargetBytes(960, 0, false, 395, 288, 40, 8150)
 	if enc.vbrOffset != 9 {
 		t.Fatalf("LFE VBR offset=%d, want libopus trace value 9", enc.vbrOffset)
 	}
