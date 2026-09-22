@@ -1457,7 +1457,18 @@ func (e *Encoder) EncodeFloat32WithAnalysisMaxBytes(pcm []float32, frameSize int
 			}
 			// tot_size tracks the self-delimited size for non-last streams.
 			if i != e.streams-1 {
-				totSize += len(packet) + frameLengthBytes(len(packet))
+				if packet[0]&3 == 0 {
+					totSize += len(packet) + frameLengthBytes(len(packet)-1)
+				} else {
+					// Repacketizing drops ordinary padding and can change the
+					// framing code, so use the same serializer as assembly.
+					e.assembleArena.Ensure(len(packet) + 2)
+					written, err := makeSelfDelimitedPacketInto(&e.packetParser, e.assembleArena.Tail(), packet)
+					if err != nil {
+						return nil, err
+					}
+					totSize += written
+				}
 			} else {
 				totSize += len(packet)
 			}
