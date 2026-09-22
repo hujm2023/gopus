@@ -469,6 +469,10 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 	// Keep stateful prefilter output on float32 precision to match libopus float path.
 
 	e.lastPitchChange = false
+	// celt/celt_encoder.c:2042-2044 compares the integer pitch against
+	// `1.26*st->prefilter_period` / `.79*st->prefilter_period`. Those literals are C
+	// doubles, so the reference evaluates the comparison in double precision; the
+	// wide-scalar uses below are allowed via tools/type_parity_allowlist.tsv.
 	if (pfResult.gain > 0.4 || prevPrefilterGain > 0.4) && (!e.analysisValid || float64(e.analysisTonality) > .3) {
 		e.lastPitchChange = float64(pfResult.pitch) > 1.26*float64(prevPrefilterPeriod) ||
 			float64(pfResult.pitch) < .79*float64(prevPrefilterPeriod)
