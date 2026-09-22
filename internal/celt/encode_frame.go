@@ -2377,7 +2377,9 @@ func (e *Encoder) computeVBRTarget(baseTargetQ3, frameSize int, tfEstimate float
 func (e *Encoder) computeVBRTargetWithBoost(baseTargetQ3, frameSize int, tfEstimate float32, pitchChange bool, totalBoost, equivRate int) int {
 	mode := e.modeConfig(frameSize)
 	lm := mode.LM
-	nbBands := e.effectiveBandCount(frameSize)
+	// The VBR model uses all mode bands, even when coding a narrower bandwidth.
+	// Standard and supported scaled custom modes share the complete EBands table.
+	nbBands := MaxBands
 	channels := e.codedChannels()
 
 	codedBands := nbBands
