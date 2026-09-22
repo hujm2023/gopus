@@ -1399,7 +1399,15 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 	}
 
 	// Compute VAD flags
-	vadMid := e.computeSilkVAD(mid, len(mid), fsKHz)
+	// Continue the same mid-channel VAD history used by stereo prefill and SILK.
+	e.ensureSilkVADMidFeedback()
+	midState, vadMid := computeSilkVADFrameState(e.silkVADMidFeedback, mid, len(mid), fsKHz)
+	midState, vadMid = e.applyOpusVADToSilkState(midState, vadMid)
+	e.lastVADActivityQ8 = midState.SpeechActivityQ8
+	e.lastVADInputTiltQ15 = midState.InputTiltQ15
+	e.lastVADInputQualityBandsQ15 = midState.InputQualityBandsQ15
+	e.lastVADActive = vadMid
+	e.lastVADValid = midState.Valid
 	e.silkEncoder.SetVADState(e.lastVADActivityQ8, e.lastVADInputTiltQ15, e.lastVADInputQualityBandsQ15)
 
 	vadSide := false
