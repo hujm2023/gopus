@@ -2113,7 +2113,7 @@ func (e *Encoder) vbrMaxPayloadBytes(frameSize int) int {
 	if extsupport.QEXT && e.qextActive() && !e.hybrid {
 		packetSizeCap = qextPacketSizeCap
 	}
-	maxBytes := max((packetSizeCap>>(3-lm))-1, 2)
+	maxBytes := max(packetSizeCap>>(3-lm), 2)
 	if e.maxPayloadBytes > 0 && maxBytes > int(e.maxPayloadBytes) {
 		maxBytes = int(e.maxPayloadBytes)
 	}
@@ -2243,14 +2243,14 @@ func (e *Encoder) computeTargetBits(frameSize int, tfEstimate float32, pitchChan
 	// Frame-size-dependent maximum payload bytes (510 kb/s physical limit).
 	// Reference: libopus celt_encoder.c line 2445:
 	//   nbCompressedBytes = IMIN(nbCompressedBytes, packet_size_cap >> (3-LM))
-	// packet_size_cap = 1275 (total); subtract 1 for TOC-excluded payload.
+	// The CELT cap already excludes the Opus TOC byte.
 	// In libopus VBR mode, nbCompressedBytes is the buffer cap (not bitrate-derived).
 	// The per-bitrate constraint comes from CVBR reservoir tracking.
 	packetSizeCap := 1275
 	if extsupport.QEXT && e.qextActive() && !e.hybrid {
 		packetSizeCap = qextPacketSizeCap
 	}
-	vbrMaxBytes := max((packetSizeCap>>(3-lm))-1, 2)
+	vbrMaxBytes := max(packetSizeCap>>(3-lm), 2)
 
 	// Convert to Q3 format (8ths of bits) for VBR computation
 	// Reference: libopus celt_encoder.c line 1903
