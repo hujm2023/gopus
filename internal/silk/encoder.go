@@ -963,7 +963,10 @@ func (e *Encoder) finalizePacketRange(re *rangecoding.Encoder) []byte {
 	e.lastRng = re.Range()
 	n := max((re.Tell()+7)>>3, 0)
 	raw := re.Done()
-	return raw[:min(n, len(raw))]
+	// Done returns a packed view but retains the input buffer's capacity and
+	// zeroes its unused gap. Preserve ceil(Tell/8), including an implicit zero
+	// before appended CELT redundancy; only the Opus wrapper may trim it.
+	return raw[:min(n, re.Storage())]
 }
 
 // ReconfigureBandwidth mirrors control_codec.c: resample x_buf via the API
