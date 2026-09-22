@@ -268,7 +268,8 @@ func computeStereoCorrelationLogs(normL, normR []celtNorm, nbBands, lm, intensit
 	}
 
 	// Compute log correlation: log2(1.001 - sum^2)
-	// This gives a negative value; higher correlation = more negative
+	// Higher correlation gives a more negative value; near zero correlation
+	// the 1.001 margin makes the logarithm slightly positive.
 	logXCArg := opusVal32(1.001) - opusVal32(sum)*opusVal32(sum)
 	logXC := opusVal16(opusmath.CeltLog2(logXCArg))
 	logXC2Arg := opusVal32(1.001) - opusVal32(minXC)*opusVal32(minXC)
@@ -283,6 +284,7 @@ func computeStereoCorrelationLogs(normL, normR []celtNorm, nbBands, lm, intensit
 
 // UpdateStereoSaving updates the running stereo_saving estimate used by libopus
 // compute_vbr(). The state is updated once per frame after alloc-trim analysis.
+// Keep the raw estimate: compute_vbr caps it at 1 only when using it.
 func UpdateStereoSaving(prev opusVal16, normL, normR []celtNorm, nbBands, lm, intensity int) opusVal16 {
 	if len(normL) == 0 || len(normR) == 0 || nbBands <= 0 {
 		return prev
@@ -299,12 +301,6 @@ func UpdateStereoSaving(prev opusVal16, normL, normR []celtNorm, nbBands, lm, in
 	next := prev + opusVal16(0.25)
 	if next > limit {
 		next = limit
-	}
-	if next < opusVal16(0) {
-		next = 0
-	}
-	if next > opusVal16(1) {
-		next = 1
 	}
 	return next
 }
