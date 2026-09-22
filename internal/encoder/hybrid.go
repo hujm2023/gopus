@@ -510,6 +510,13 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 	if useFinalHybridVBRTarget {
 		hybridCELTTargetBytes = maxTargetBytes
 	}
+	// A SILK payload beyond the entire packet budget becomes a PLC frame.
+	// Do not advance CELT history for data libopus never encodes (opus_encoder.c).
+	if re.Tell() > 8*payloadTarget {
+		e.hybridState.prevHBGain = hbGain
+		e.hybridFinalRange = 0
+		return []byte{0}, nil
+	}
 	e.encodeCELTHybridImproved(celtInput, frameSize, hybridCELTTargetBytes, useFinalHybridVBRTarget, !useFinalHybridVBRTarget && maxPacketBytes == 0, dredCarrier)
 	mainRng := e.celtEncoder.FinalRange()
 
