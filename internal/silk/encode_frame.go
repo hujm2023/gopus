@@ -129,13 +129,8 @@ func (e *Encoder) EncodeFrame(pcm []float32, lookahead []float32, vadFlag bool) 
 			targetRate -= (bitsBalance * 1000) / 500
 		}
 
-		// Never exceed input bitrate, and maintain minimum for quality.
-		if targetRate > e.targetRateBps {
-			targetRate = e.targetRateBps
-		}
-		if targetRate < 5000 {
-			targetRate = 5000
-		}
+		// Match silk_LIMIT even when the configured rate falls below 5000.
+		targetRate = silkLimit32(targetRate, e.targetRateBps, 5000)
 
 		e.lastControlTargetRateBps = targetRate
 		e.controlSNR(int(targetRate), numSubframes)

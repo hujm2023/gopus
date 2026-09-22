@@ -482,12 +482,7 @@ func stereoAllocationTargetRate(enc *Encoder, targetRateBps, frameLength, bitsUs
 		bitsBalance := bitsUsedSoFar - int(enc.nBitsUsedLBRR) - nBits*int(enc.nFramesEncoded)
 		targetRate -= (bitsBalance * 1000) / 500
 	}
-	if targetRate > targetRateBps {
-		targetRate = targetRateBps
-	}
-	if targetRate < 5000 {
-		targetRate = 5000
-	}
+	targetRate = silkLimitInt(targetRate, targetRateBps, 5000)
 	return targetRate
 }
 
