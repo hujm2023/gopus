@@ -17,3 +17,7 @@ func quantize4(batch *nsqQuant4, offset, lambda int32) {
 
 //go:noescape
 func quantize4SSE41(batch *nsqQuant4, offset, lambda int32)
+
+func nsqDelDecWideReconstruction() bool {
+	return cpufeat.AMD64.HasAVX2 && cpufeat.AMD64.HasFMA
+}
