@@ -373,6 +373,28 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 	silkSignalType, silkOffset := e.silkEncoder.LastEncodedSignalInfo()
 	e.celtEncoder.SetSilkInfo(silkSignalType, silkOffset)
 
+	targetWidthQ14 := int16(16384)
+	if e.channels == 2 && len(e.celtEnergyMask) == 0 {
+		if e.hybridState != nil {
+			targetWidthQ14 = min(max(e.hybridState.silkStereoWidthQ14, 0), 16384)
+		}
+		if e.celtInternalChannelsForMode(ModeHybrid) == 1 {
+			// A mono-coded Hybrid stream uses the rate-derived width before
+			// physical-channel transient analysis, just like CELT-only mode.
+			frameRate := int32(int(e.sampleRate) / frameSize)
+			equivRate := e.computeEquivRate(e.bitrate, int32(e.streamChannels), frameRate, e.bitrateMode != ModeCBR, ModeHybrid, e.complexity, e.packetLoss)
+			switch {
+			case equivRate > 32000:
+				targetWidthQ14 = 16384
+			case equivRate < 16000:
+				targetWidthQ14 = 0
+			default:
+				targetWidthQ14 = int16(16384 - 2048*(32000-equivRate)/(equivRate-14000))
+			}
+			e.hybridState.silkStereoWidthQ14 = targetWidthQ14
+		}
+	}
+
 	// Step 2b: Encode redundancy flag between SILK and CELT.
 	// Per libopus opus_encoder.c: in hybrid mode, a redundancy flag is always
 	// written between the SILK and CELT portions (logp=12).
@@ -382,6 +404,9 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 		if transitionRedundancy && redundancyBytes >= 2 {
 			redundancyBytes = clampRedundancyBytesAfterSilk(baseTargetBytes, re.Tell(), redundancyBytes, true)
 			if transitionCeltToHybrid {
+				if e.channels == 2 && len(e.celtEnergyMask) == 0 {
+					redundancyPCM = e.applyStereoWidthFade(redundancyPCM, e.hybridState.stereoWidthQ14, targetWidthQ14)
+				}
 				data, rng, err := e.encodeCELTTransitionRedundancy(redundancyPCM, frameSize, redundancyBytes)
 				if err != nil {
 					return nil, err
@@ -447,25 +472,6 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 	// in the caller (Fs/250 = 192 samples). No additional delay is needed here.
 	celtInput := e.applyHBGainFade(celtPCM, hbGain)
 	if e.channels == 2 && len(e.celtEnergyMask) == 0 {
-		targetWidthQ14 := int16(16384)
-		if e.hybridState != nil {
-			targetWidthQ14 = min(max(e.hybridState.silkStereoWidthQ14, 0), 16384)
-		}
-		if e.celtInternalChannelsForMode(ModeHybrid) == 1 {
-			// A mono-coded Hybrid stream uses the rate-derived width before
-			// physical-channel transient analysis, just like CELT-only mode.
-			frameRate := int32(int(e.sampleRate) / frameSize)
-			equivRate := e.computeEquivRate(e.bitrate, int32(e.streamChannels), frameRate, e.bitrateMode != ModeCBR, ModeHybrid, e.complexity, e.packetLoss)
-			switch {
-			case equivRate > 32000:
-				targetWidthQ14 = 16384
-			case equivRate < 16000:
-				targetWidthQ14 = 0
-			default:
-				targetWidthQ14 = int16(16384 - 2048*(32000-equivRate)/(equivRate-14000))
-			}
-			e.hybridState.silkStereoWidthQ14 = targetWidthQ14
-		}
 		if e.hybridState.stereoWidthQ14 < (1<<14) || targetWidthQ14 < (1<<14) {
 			celtInput = e.applyStereoWidthFade(celtInput, e.hybridState.stereoWidthQ14, targetWidthQ14)
 		}
@@ -714,14 +720,6 @@ func (e *Encoder) prepareCELTTransitionRedundancyInput(celtPCM []opusRes, hbGain
 	}
 	redundancySamples := redundancyFrameSize * channels
 	if redundancySamples <= 0 || len(celtPCM) < redundancySamples {
-		return celtPCM
-	}
-
-	prevGain := opusVal16(1)
-	if e.hybridState != nil {
-		prevGain = e.hybridState.prevHBGain
-	}
-	if prevGain == hbGain && hbGain >= 1.0 {
 		return celtPCM
 	}
 
