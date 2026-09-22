@@ -625,6 +625,11 @@ func (d *Decoder) applyDeemphasisAndScaleDownsampleToFloat32(dst []float32, samp
 	const verySmall float32 = 1e-30
 	const coef float32 = float32(PreemphCoef)
 
+	if d.channels == 1 {
+		d.applyDeemphasisAndScaleMonoFloat32DownsampleToFloat32(dst, samples, downsample, scale)
+		return
+	}
+
 	frames := len(samples) / 2
 	n := min(len(dst)/2, frames/downsample)
 	if n <= 0 {

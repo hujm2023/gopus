@@ -424,3 +424,32 @@ func TestDeemphasisZeroInputMatchesLibopus(t *testing.T) {
 		}
 	}
 }
+
+func TestDeemphasisMonoDownsampleMatchesLibopus(t *testing.T) {
+	libopustest.RequireOracle(t)
+	requireBitExactFloat(t)
+	for _, downsample := range []int{2, 3, 4, 6} {
+		for _, zero := range []bool{false, true} {
+			t.Run(fmt.Sprintf("factor%d/zero%t", downsample, zero), func(t *testing.T) {
+				samples := make([]float32, 120)
+				if !zero {
+					for i := range samples {
+						samples[i] = float32(i%13) - 6
+					}
+				}
+				want := probeLibopusDeemphasis(t, 1, [][]float32{samples}, []float32{0})
+				dec := NewDecoder(1)
+				got := make([]float32, len(samples)/downsample)
+				dec.applyDeemphasisAndScaleDownsampleToFloat32(got, samples, downsample, 1.0/32768.0)
+				for i := range got {
+					if got[i] != want.pcm[i*downsample] {
+						t.Fatalf("pcm[%d]=%g want %g", i, got[i], want.pcm[i*downsample])
+					}
+				}
+				if dec.preemphState[0] != want.mem[0] {
+					t.Fatalf("state=%g want %g", dec.preemphState[0], want.mem[0])
+				}
+			})
+		}
+	}
+}
