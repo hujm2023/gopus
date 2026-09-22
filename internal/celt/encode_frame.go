@@ -435,6 +435,8 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 			if !e.IsHybrid() {
 				e.updateSilenceAnalysisState(nbBands, codedChannels, lm)
 			}
+			// The exhausted silence budget selects SPREAD_NORMAL in libopus.
+			e.spreadDecision = spreadNormal
 			return e.finishEncodedSilenceFrame(re, frameSize, targetBytes)
 		}
 		re.EncodeBit(0, 15)
@@ -1021,6 +1023,9 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 	} else {
 		spread = spreadNormal
 	}
+	// Every coded decision feeds the next frame's spreading hysteresis,
+	// including shortcuts that bypass SpreadingDecisionWithWeights.
+	e.spreadDecision = int32(spread)
 	// Step 11.3: Initialize caps for allocation (zero-alloc)
 	caps := ensureInt32Slice(&e.scratch.caps, nbBands)
 	if pm := e.perMode; pm != nil {
