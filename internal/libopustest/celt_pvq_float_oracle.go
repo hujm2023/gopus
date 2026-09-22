@@ -26,8 +26,8 @@ func buildCELTPVQFloatHelper() (string, error) {
 	})
 }
 
-// ProbeCELTPVQSearchFloat runs the FLOAT op_pvq_search_c kernel from the
-// default (float) libopus reference. x is the celt_norm (float32) input vector;
+// ProbeCELTPVQSearchFloat runs the dispatched float op_pvq_search kernel from
+// the selected libopus reference. x is the celt_norm (float32) input vector;
 // it returns yy (codeword squared norm, float32) and iy (signed pulse counts).
 // This is the same-arch float oracle for the encoder PVQ search.
 func ProbeCELTPVQSearchFloat(x []float32, k int) (yy float32, iy []int32, err error) {

@@ -448,8 +448,7 @@ func lossDistortion(eBands, oldEBands []celtGLog, start, end, nbEBands, channels
 			dist += d * d
 		}
 	}
-	// Scale and clamp
-	dist /= 128.0
+	// Float-build SHR32 and PSHR32 are identity operations; only clamp.
 	if dist > 200 {
 		dist = 200
 	}

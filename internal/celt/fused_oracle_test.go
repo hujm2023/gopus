@@ -3,6 +3,8 @@ package celt
 import (
 	"runtime"
 	"testing"
+
+	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
 // requireBitExactFloat skips a Tier-1 bit-exact CELT-float oracle on the builds
@@ -12,10 +14,11 @@ import (
 //   - the fused arm64 default build (celtFusedFloat): the NEON-shaped float path
 //     is quality-gated (opus_compare) rather than byte-identical to scalar C, the
 //     same posture libopus's own NEON kernels take.
-//   - the amd64 pure-Go build (-tags purego): gopus runs scalar Go float
+//   - the amd64 pure-Go build (-tags purego) with a SIMD reference: gopus runs scalar Go float
 //     (libopusFloatInnerProdUsesSSEOrder is false), but the linux/amd64 CI libopus
 //     is the autoconf-default SSE/AVX RTCD build, so a scalar-vs-SIMD comparison
-//     would diverge by ~1 ULP. Comparing the pure-Go float path against a SIMD
+//     would diverge by ~1 ULP. A requested scalar reference runs this gate.
+//     Comparing the pure-Go float path against a SIMD
 //     reference is not a fair bit-exact oracle.
 //
 // Bit-exact coverage of these kernels still runs where the comparison is fair:
@@ -27,7 +30,7 @@ func requireBitExactFloat(t *testing.T) {
 	if celtFusedFloat {
 		t.Skip("bit-exact vs scalar libopus; fused arm64 default build is quality-gated (asm amd64 / pure-Go arm64 hold the bit-exact oracle)")
 	}
-	if runtime.GOARCH == "amd64" && !libopusFloatInnerProdUsesSSEOrder {
+	if runtime.GOARCH == "amd64" && !libopusFloatInnerProdUsesSSEOrder && !libopustest.ScalarRefRequested() {
 		t.Skip("bit-exact vs SIMD libopus; amd64 pure-Go float path is quality-gated (asm amd64 / pure-Go arm64 hold the bit-exact oracle)")
 	}
 }

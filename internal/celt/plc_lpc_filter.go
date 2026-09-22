@@ -1,6 +1,10 @@
 package celt
 
 func xcorrKernel4Float32(x, y []float32, sum *[4]float32, length int) {
+	if libopusFloatInnerProdUsesSSEOrder {
+		xcorrKernel4Float32SSEOrder(x, y, sum, length)
+		return
+	}
 	if length <= 0 {
 		return
 	}

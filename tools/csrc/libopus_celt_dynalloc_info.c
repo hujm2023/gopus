@@ -20,15 +20,6 @@
 #define HELPER_MAX_CHANNELS 2
 #define HELPER_LEAK_BANDS 19
 
-#if defined(ENABLE_ASSERTIONS) || defined(ENABLE_HARDENING)
-void celt_fatal(const char *str, const char *file, int line) {
-  (void)str;
-  (void)file;
-  (void)line;
-  abort();
-}
-#endif
-
 static int set_binary_stdio(void) {
 #ifdef _WIN32
   if (_setmode(_fileno(stdin), _O_BINARY) == -1) return 0;

@@ -10,7 +10,7 @@ import (
 
 // TestOpPVQSearchFloatMatchesLibopusSameArch verifies that the gopus float PVQ
 // pulse search (op_pvq_search) is byte-exact against the SAME-ARCH float libopus
-// op_pvq_search_c kernel (built from the default float reference on this host).
+// dispatched op_pvq_search kernel from the selected float reference.
 //
 // libopus has no ARM NEON op_pvq_search, so the float build runs the scalar C
 // kernel here; gopus's arm64 NEON pulse-loop assembly must reproduce it exactly.

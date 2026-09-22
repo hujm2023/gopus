@@ -19,6 +19,10 @@ func (d *Decoder) ensureSILKPLCState(channel int) *plc.SILKPLCState {
 	if d.silkPLCState[channel] == nil {
 		d.silkPLCState[channel] = plc.NewSILKPLCState()
 	}
+	// silk/PLC.c clears cached LPC coefficients before concealing a reset channel.
+	if d.state[channel].firstFrameAfterReset {
+		clear(d.silkPLCState[channel].PrevLPCQ12[:])
+	}
 	return d.silkPLCState[channel]
 }
 

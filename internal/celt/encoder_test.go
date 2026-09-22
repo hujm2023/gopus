@@ -683,6 +683,12 @@ func TestVBRSilenceFrameShrinksToMinimum(t *testing.T) {
 	if enc.FrameCount() != 1 {
 		t.Fatalf("FrameCount=%d want 1", enc.FrameCount())
 	}
+	// The silent frame exhausts the coding budget but still accumulates
+	// loss_distortion in libopus quant_coarse_energy (LM=3, initial delay=1).
+	alpha := float32(AlphaCoef[3])
+	if want := alpha*alpha + 200; float32(enc.delayedIntra) != want {
+		t.Fatalf("silent-frame delayedIntra=%g want %g", enc.delayedIntra, want)
+	}
 	for i, energy := range enc.PrevEnergy() {
 		if energy != -28.0 {
 			t.Fatalf("PrevEnergy[%d]=%f want -28", i, energy)

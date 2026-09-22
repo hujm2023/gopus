@@ -137,7 +137,7 @@ func (d *Decoder) applyPendingPLCPrefilterAndFold() {
 			w1 := float32(window[segLen-1-i])
 			x0 := float32(etmp[segLen-1-i])
 			x1 := float32(etmp[i])
-			overlap[i] = celtSig(mdctFMA32(w0, x0, w1*x1))
+			overlap[i] = celtSig(mdctMulAddMix(w0, w1, x0, x1))
 		}
 	}
 
@@ -1098,19 +1098,12 @@ func innerProdFloat32(x, y []float32, length int) float32 {
 	}
 	x = x[:length]
 	y = y[:length]
-	var acc0, acc1, acc2, acc3 float32
-	for len(x) >= 4 {
-		acc0 += x[0] * y[0]
-		acc1 += x[1] * y[1]
-		acc2 += x[2] * y[2]
-		acc3 += x[3] * y[3]
-		x = x[4:]
-		y = y[4:]
-	}
+	// libopus celt/pitch.h:celt_inner_prod_c uses one sequential accumulator.
+	var sum float32
 	for i := range x {
-		acc0 += x[i] * y[i]
+		sum += x[i] * y[i]
 	}
-	return acc0 + acc1 + acc2 + acc3
+	return sum
 }
 
 func innerProdFloat32SSEOrder(x, y []float32, length int) float32 {

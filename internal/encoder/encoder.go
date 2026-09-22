@@ -852,12 +852,10 @@ func (e *Encoder) silkInputBitrate(frameSize int) int {
 	if e.bitrate <= 0 || frameSize <= 0 {
 		return 0
 	}
-	overheadBps := (8 * int(e.sampleRate)) / frameSize
-	rate := int(e.bitrate) - overheadBps
-	if rate < 0 {
-		return 0
-	}
-	return rate
+	// Keep the integer conversion order in opus_encoder.c: reserve TOC bits
+	// from the frame budget, then convert the remaining bits back to a rate.
+	bits := bitrateToBitsFs(int(e.bitrate), int(e.sampleRate), frameSize) - 8
+	return max(0, bitsToBitrateFs(bits, int(e.sampleRate), frameSize))
 }
 
 // computeEquivRate calculates the equivalent bitrate based on frame rate, VBR mode,

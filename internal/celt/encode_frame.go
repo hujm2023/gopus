@@ -431,7 +431,7 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 			}
 			e.runPrefilter(preemph, frameSize, e.TapsetDecision(), false, tfEstimate, targetBytes, toneFreq, toneishness, maxPitchRatio)
 			if !e.IsHybrid() {
-				e.updateTemporalVBRSilence(nbBands, codedChannels)
+				e.updateSilenceAnalysisState(nbBands, codedChannels, lm)
 			}
 			return e.finishEncodedSilenceFrame(re, frameSize, targetBytes)
 		}
@@ -1859,17 +1859,11 @@ func computeMDCTWithHistoryScratchStereoROverlap(samples, history []float32, sho
 	return coeffs[:frameSize]
 }
 
-// updateTemporalVBRSilence advances the temporal-VBR running average (st->spec_avg)
-// for a silent frame. libopus does NOT short-circuit a silent frame: it runs the
-// full pipeline (compute_mdcts on the ~zero input, compute_band_energies, ...,
-// the temporal-VBR block at celt_encoder.c lines 2186-2202) so spec_avg keeps
-// decaying toward the silence floor while DTX/silence frames are emitted. The
-// gopus silence fast path returns early, so this reproduces just that spec_avg
-// update on the silence-floor band energies, keeping the value carried into the
-// post-silence recovery frame's VBR target bit-exact with libopus. start is 0
-// (CELT-only) and a silent frame is never transient, so offset is 0.
-func (e *Encoder) updateTemporalVBRSilence(nbBands, codedChannels int) {
-	if e.lfe || nbBands <= 0 {
+// updateSilenceAnalysisState advances coarse-energy prediction and temporal VBR
+// on the silence fast path. libopus runs quant_coarse_energy and spectral
+// averaging even after the silence flag exhausts the coding budget.
+func (e *Encoder) updateSilenceAnalysisState(nbBands, codedChannels, lm int) {
+	if nbBands <= 0 {
 		return
 	}
 	bandEnd := nbBands
@@ -1879,6 +1873,15 @@ func (e *Encoder) updateTemporalVBRSilence(nbBands, codedChannels int) {
 	}
 	silenceE := ensureGLogSlice(&e.scratch.silenceEnergyVBR, nbBands*codedChannels)
 	e.computeBandEnergiesGLogActive(silenceFreq, nbBands, nbBands, codedChannels, 1, silenceE)
+
+	// quant_coarse_energy runs with an exhausted budget on silence, so intra is false
+	// but loss_distortion still advances the predictor used by the next frame.
+	distortion := coarseLossDistortion(silenceE, e.prevEnergy, nbBands, codedChannels, e.predStride())
+	alpha := float32(AlphaCoef[lm])
+	e.delayedIntra = opusVal32(alpha*alpha*float32(e.delayedIntra) + distortion)
+	if e.lfe {
+		return
+	}
 
 	follow := float32(-10.0)
 	frameAvg := float32(0.0)

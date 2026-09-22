@@ -1,6 +1,7 @@
 package celt
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -28,7 +29,7 @@ func buildLibopusCELTFilterHelper() (string, error) {
 		CFlags:      []string{"-DHAVE_CONFIG_H", "-DRESYNTH", "-O3", "-DNDEBUG"},
 		RefIncludes: []string{"src", "celt", "silk", "silk/float"},
 		RefSources:  []string{"celt/celt_decoder.c", "celt/celt.c"},
-		Libs:        []string{"-lm"},
+		Libs:        []string{libopustest.RefPath(".libs", "libopus.a"), "-lm"},
 		DeadStrip:   true,
 	})
 }
@@ -388,5 +389,38 @@ func TestCombFilterWithInputF32MatchesLibopus(t *testing.T) {
 			copySigToFloat32(got32, got[start:start+tc.n])
 			assertFloat32Bits(t, "comb", got32, want)
 		})
+	}
+}
+
+func TestDeemphasisZeroInputMatchesLibopus(t *testing.T) {
+	libopustest.RequireOracle(t)
+	requireBitExactFloat(t)
+	for _, channels := range []int{1, 2} {
+		for _, inPlace := range []bool{false, true} {
+			t.Run(fmt.Sprintf("channels%d/inplace%t", channels, inPlace), func(t *testing.T) {
+				planar := make([][]float32, channels)
+				for ch := range planar {
+					planar[ch] = make([]float32, 67)
+				}
+				want := probeLibopusDeemphasis(t, channels, planar, make([]float32, channels))
+				dec := NewDecoder(channels)
+				got := make([]float32, 67*channels)
+				if inPlace {
+					dec.applyDeemphasisAndScale(got, 1.0/32768.0)
+				} else {
+					dec.applyDeemphasisAndScaleToFloat32(got, make([]float32, len(got)), 1.0/32768.0)
+				}
+				for i := range got {
+					if math.Float32bits(got[i]) != math.Float32bits(want.pcm[i]) {
+						t.Fatalf("pcm[%d]=%g want %g", i, got[i], want.pcm[i])
+					}
+				}
+				for ch := range channels {
+					if dec.preemphState[ch] != want.mem[ch] {
+						t.Fatalf("state[%d]=%g want %g", ch, dec.preemphState[ch], want.mem[ch])
+					}
+				}
+			})
+		}
 	}
 }

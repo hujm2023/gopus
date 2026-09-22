@@ -726,6 +726,10 @@ func combPlanarAtFloat32(samples []float32, hist []celtSig, history, pos int) fl
 }
 
 func combFilterConstValue(base, g10, g11, g12, center, plus1, minus1, plus2, minus2 float32) float32 {
+	if libopusFloatInnerProdUsesSSEOrder {
+		// libopus celt/x86/pitch_sse.c:comb_filter_const_sse groups the side taps.
+		return (base + g10*center) + (g11*(plus1+minus1) + g12*(plus2+minus2))
+	}
 	sum := base
 	sum += g10 * center
 	sum += g11 * (plus1 + minus1)

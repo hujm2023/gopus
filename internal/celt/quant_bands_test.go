@@ -103,8 +103,14 @@ func TestLossDistortion(t *testing.T) {
 
 	dist := lossDistortion(eBands, oldEBands, 0, 10, MaxBands, 1)
 
-	// Expected: sum of (0.5)^2 * 10 / 128 = 0.5^2 * 10 / 128 = 2.5/128 ≈ 0.0195
-	expected := float32(2.5 / 128.0)
+	// libopus float loss_distortion sums squared differences without fixed-point shifts.
+	expected := float32(2.5)
+	if got := coarseLossDistortion(eBands, oldEBands, 10, 1, MaxBands); got != expected {
+		t.Errorf("coarseLossDistortion=%g want %g", got, expected)
+	}
+	if got := coarseLossDistortionRange(eBands, oldEBands, 2, 10, 10, 1, MaxBands); got != 2 {
+		t.Errorf("coarseLossDistortionRange=%g want 2", got)
+	}
 	if math.Abs(float64(dist-expected)) > 0.001 {
 		t.Errorf("lossDistortion = %f, want ~%f", dist, expected)
 	}

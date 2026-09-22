@@ -47,7 +47,7 @@ func buildLibopusHybridCombineHelper() (string, error) {
 		CFlags:      []string{"-DHAVE_CONFIG_H", "-DRESYNTH", "-O3", "-DNDEBUG"},
 		RefIncludes: []string{"src", "celt", "silk", "silk/float"},
 		RefSources:  []string{"celt/celt_decoder.c", "celt/celt.c"},
-		Libs:        []string{"-lm"},
+		Libs:        []string{libopustest.RefPath(".libs", "libopus.a"), "-lm"},
 		DeadStrip:   true,
 	})
 }

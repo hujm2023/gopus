@@ -1,9 +1,7 @@
 /* Float CELT PVQ pulse-search kernel oracle.
  *
- * Built against the default (float) libopus reference. celt_norm is float.
- * The ARM NEON override for op_pvq_search is undefined here so the canonical
- * pure-C op_pvq_search_c is exercised (libopus has no arm NEON op_pvq_search,
- * so the float build already uses the scalar kernel here).
+ * Uses the selected float reference and its native CPU dispatch. The scalar
+ * reference selects op_pvq_search_c; the default x86 reference selects SSE2.
  *
  * Input/output X and yy are transported as raw IEEE-754 float bits in int32.
  */
@@ -21,13 +19,8 @@
 #include "config.h"
 #endif
 
-#undef OPUS_ARM_MAY_HAVE_NEON_INTR
-#undef OPUS_ARM_PRESUME_NEON_INTR
-#undef OPUS_ARM_MAY_HAVE_NEON
-#undef OPUS_ARM_PRESUME_NEON
-#undef OPUS_HAVE_RTCD
-
 #include "arch.h"
+#include "cpu_support.h"
 #include "vq.h"
 
 #define GPVI_MAGIC "GPFI"
@@ -85,7 +78,7 @@ static int run_pvq_search(void) {
     cvt.i = v;
     X[i] = (celt_norm)cvt.f;
   }
-  yy = op_pvq_search_c(X, iy, (int)k, (int)n, 0);
+  yy = op_pvq_search(X, iy, (int)k, (int)n, opus_select_arch());
   if (!write_u32(MODE_PVQ_SEARCH)) { free(X); free(iy); return 0; }
   cvt.f = (float)yy;
   if (!write_i32(cvt.i)) { free(X); free(iy); return 0; }
