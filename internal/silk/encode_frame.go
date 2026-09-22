@@ -47,6 +47,9 @@ func (e *Encoder) EncodeFrame(pcm []float32, lookahead []float32, vadFlag bool) 
 		e.nFramesPerPacket = 1
 	}
 	firstFrameAfterReset := e.firstFrameAfterResetActive()
+	// libopus clears the pending LBRR flags when the packet layout changes; do it
+	// before anything consumes them for this packet's header.
+	e.ControlPacketSize(packetPayloadSizeMs)
 
 	// Match libopus silk/control_codec.c: when fs_kHz changes (including on the
 	// very first call, since fs_kHz starts at 0 after memset-init), the encoder
@@ -1063,6 +1066,7 @@ func (e *Encoder) EncodePacketWithFECWithVADStates(pcm []float32, lookahead []fl
 	frameSamples := min(len(pcm), config.SampleRate*20/1000)
 	nFrames := min(max(len(pcm)/frameSamples, 1), maxFramesPerPacket)
 	e.nFramesPerPacket = int32(nFrames)
+	e.ControlPacketSize(nFrames * frameSamples * 1000 / config.SampleRate)
 	bufSize := max(max(len(pcm)/2+100, 150), maxSilkPacketBytes)
 	output := ensureByteSlice(&e.scratchOutput, bufSize)
 	e.scratchRangeEncoder.Init(output)

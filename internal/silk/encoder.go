@@ -31,6 +31,9 @@ type Encoder struct {
 	rangeEncoder      *rangecoding.Encoder
 	packetTermination func(*rangecoding.Encoder)
 	controlFrameMS    int
+	// packetSizeMS is the payload size in ms of the packet last controlled, used
+	// to detect the libopus packet-layout transition that clears pending LBRR flags.
+	packetSizeMS int32
 
 	// lastRng holds the final range coder state after encoding.
 	// This is captured before calling Done() which clears the state.
@@ -412,6 +415,7 @@ func (e *Encoder) Reset() {
 	e.inDTX = false
 	e.packetTermination = nil
 	e.resetFixedState()
+	e.packetSizeMS = 0
 	e.haveEncoded = false
 	e.previousLogGain = 0
 	e.previousGainIndex = 0
@@ -937,6 +941,41 @@ func (e *Encoder) SetReducedDependency(enabled bool) {
 // ReducedDependency reports whether reduced dependency coding is enabled.
 func (e *Encoder) ReducedDependency() bool {
 	return e.reducedDependency
+}
+
+// ControlPacketSize mirrors silk_control_codec's PacketSize_ms bookkeeping and the
+// LBRR-flag clear libopus performs when the packet layout changes. enc_API.c
+// computes transition = (payloadSize_ms != PacketSize_ms) || channel-count change
+// and, when it is set (or on the first frame after a reset), clears the pending
+// LBRR flags before the packet header is written (enc_API.c:207 and :268), so the
+// new packet carries no in-band FEC even though the previous frame had set a flag.
+// payloadMS is the packet's payload size in ms: 10/20 for an internal frame and
+// 40/60 for a standalone multi-frame SILK packet.
+func (e *Encoder) ControlPacketSize(payloadMS int) {
+	if payloadMS <= 0 {
+		return
+	}
+	transition := int32(payloadMS) != e.packetSizeMS
+	e.packetSizeMS = int32(payloadMS)
+	if transition {
+		for i := range e.lbrrFlags {
+			e.lbrrFlags[i] = 0
+		}
+	}
+}
+
+// SetFramesPerPacket pins the number of SILK frames in the packet currently being
+// encoded. libopus derives it in silk_control_codec from encControl->payloadSize_ms,
+// so a long Opus packet's per-20 ms internal frame carries nFramesPerPacket == 1
+// while a standalone 40/60 ms SILK packet carries 2/3. The Opus-level Hybrid leg
+// encodes one 10/20 ms SILK frame per sub-packet, so it must pin this to 1; a stale
+// value left by an earlier long SILK packet otherwise mis-sizes the LBRR header and
+// the packet payload used by the target rate.
+func (e *Encoder) SetFramesPerPacket(n int) {
+	if n < 1 {
+		n = 1
+	}
+	e.nFramesPerPacket = int32(n)
 }
 
 // SetFEC enables or disables in-band Forward Error Correction (LBRR).

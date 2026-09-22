@@ -77,3 +77,48 @@ func TestLTPScaleUsesCurrentPacketLBRRFlag(t *testing.T) {
 		t.Fatalf("packet with LBRR: idx=%d want 1", got)
 	}
 }
+
+// TestControlPacketSizeClearsPendingLBRROnLayoutChange pins the libopus
+// enc_API.c:207/268 behaviour: a packet-layout change clears the pending LBRR
+// flags before the packet header is written, while an unchanged layout keeps them
+// so the redundancy set by the previous frame is still emitted.
+func TestControlPacketSizeClearsPendingLBRROnLayoutChange(t *testing.T) {
+	e := NewEncoder(BandwidthWideband)
+	e.SetFEC(true)
+
+	// First control after a reset: libopus sees PacketSize_ms move away from 0.
+	e.lbrrFlags[0] = 1
+	e.ControlPacketSize(20)
+	if e.lbrrFlags[0] != 0 {
+		t.Fatalf("first packet size must clear pending LBRR flags")
+	}
+
+	// Repeating the same packet size keeps the flag the previous frame set.
+	e.lbrrFlags[0] = 1
+	e.ControlPacketSize(20)
+	if e.lbrrFlags[0] != 1 {
+		t.Fatalf("unchanged packet size must keep the pending LBRR flag")
+	}
+
+	// A layout change (e.g. 40 ms SILK packet -> 20 ms Hybrid sub-packet) clears it.
+	e.ControlPacketSize(40)
+	if e.lbrrFlags[0] != 0 {
+		t.Fatalf("packet size change must clear the pending LBRR flags")
+	}
+}
+
+// TestSetFramesPerPacketPinsHybridLayout pins the Hybrid leg's per-sub-packet
+// frame count: libopus derives nFramesPerPacket from payloadSize_ms, so a 20 ms
+// Hybrid sub-frame carries 1 even after a long SILK packet set 2 or 3.
+func TestSetFramesPerPacketPinsHybridLayout(t *testing.T) {
+	e := NewEncoder(BandwidthWideband)
+	e.SetFramesPerPacket(3)
+	e.SetFramesPerPacket(1)
+	if e.nFramesPerPacket != 1 {
+		t.Fatalf("nFramesPerPacket=%d want 1", e.nFramesPerPacket)
+	}
+	e.SetFramesPerPacket(0)
+	if e.nFramesPerPacket != 1 {
+		t.Fatalf("non-positive frame count must clamp to 1, got %d", e.nFramesPerPacket)
+	}
+}

@@ -1295,6 +1295,14 @@ func (e *Encoder) encodeSILKHybridMono(pcm []float32, lookahead []float32, silkS
 	if e.hybridState != nil {
 		e.hybridState.silkStereoWidthQ14 = 16384
 	}
+	// The Hybrid leg encodes exactly one 10/20 ms SILK frame per sub-packet, so the
+	// packet's frame count is 1 (libopus derives it from payloadSize_ms in
+	// silk_control_codec). A stale long-packet count mis-sizes the LBRR header and
+	// the target-rate payload, diverging from the reference on long Hybrid packets.
+	e.silkEncoder.SetFramesPerPacket(1)
+	// A packet-layout change clears the pending LBRR flags in libopus, so a
+	// SILK-only long packet followed by 20 ms Hybrid sub-packets writes no FEC.
+	e.silkEncoder.ControlPacketSize(silkSamples * 1000 / 16000)
 	if totalRateBps > 0 {
 		e.silkEncoder.SetBitrate(totalRateBps)
 	}
@@ -1392,6 +1400,14 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 	}
 
 	// Previous-packet stereo redundancy must precede this frame's rate split.
+	// The Hybrid leg encodes one 10/20 ms SILK frame per sub-packet, so pin the
+	// frame count and packet size for both channels before the LBRR header is
+	// written (a layout change clears the pending LBRR flags, as in libopus).
+	packetMS := silkSamples * 1000 / 16000
+	e.silkEncoder.SetFramesPerPacket(1)
+	e.silkSideEncoder.SetFramesPerPacket(1)
+	e.silkEncoder.ControlPacketSize(packetMS)
+	e.silkSideEncoder.ControlPacketSize(packetMS)
 	re := e.silkEncoder.GetRangeEncoderPtr()
 	if re == nil {
 		return
