@@ -375,7 +375,6 @@ func NewEncoder(sampleRate, channels int) *Encoder {
 		intBandwidth:           types.BandwidthFullband,
 		voiceRatio:             -1,
 		streamChannels:         int32(channels),
-		prevChannels:           int32(channels),
 		autoBandwidth:          types.BandwidthFullband,
 		first:                  true,
 	}
@@ -619,7 +618,7 @@ func (e *Encoder) Reset() {
 	// start and is preserved.
 	e.bandwidth = types.BandwidthFullband
 	e.streamChannels = int32(e.channels)
-	e.prevChannels = int32(e.channels)
+	e.prevChannels = 0
 	e.autoBandwidth = types.BandwidthFullband
 	e.first = true
 	e.lbrrCoded = false
