@@ -124,3 +124,22 @@ func TestCBRPayloadBytesDoesNotApplyVBR510kCap(t *testing.T) {
 		})
 	}
 }
+
+func TestCELTAllocatedRateBelowSixKilobits(t *testing.T) {
+	enc := NewEncoder(1)
+	enc.SetLFE(true)
+	enc.SetBitrate(5100)
+	if got := enc.bitrateToBits(480); got != 51 {
+		t.Fatalf("allocated LFE bits=%d, want 51", got)
+	}
+	if got := enc.cbrPayloadBytes(480); got != 5 {
+		t.Fatalf("allocated LFE CBR payload=%d, want 5", got)
+	}
+	enc.SetConstrainedVBR(true)
+	enc.lastDynalloc.MaxDepth = 20.302326
+	// libopus permits a negative non-Hybrid base budget after overhead;
+	// the final payload minimum is applied after adding entropy-coder tell.
+	if got := enc.computeVBRTarget(-72, 480, 0, false); got != -144 {
+		t.Fatalf("LFE Q3 target=%d, want libopus trace value -144", got)
+	}
+}

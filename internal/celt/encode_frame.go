@@ -2042,9 +2042,6 @@ func (e *Encoder) bitrateToBits(frameSize int) int {
 			bitrate = 64000
 		}
 	}
-	if bitrate < 6000 {
-		bitrate = 6000
-	}
 	if bitrate > 510000 {
 		bitrate = 510000
 	}
@@ -2086,9 +2083,6 @@ func (e *Encoder) cbrPayloadBytes(frameSize int) int {
 		} else {
 			bitrate = 64000
 		}
-	}
-	if bitrate < 6000 {
-		bitrate = 6000
 	}
 	nbCompressed := max((bitrate*frameSize+4*fs)/(8*fs), 2)
 	packetSizeCap := 1275
@@ -2157,7 +2151,10 @@ func (e *Encoder) computeFinalVBRTargetBytes(frameSize int, tfEstimate float32, 
 	if e.hybrid {
 		overheadQ3 = (9*channels + 4) << bitRes
 	}
-	baseTargetQ3 := max(vbrRateQ3-overheadQ3, 0)
+	baseTargetQ3 := vbrRateQ3 - overheadQ3
+	if e.hybrid {
+		baseTargetQ3 = max(baseTargetQ3, 0)
+	}
 	if e.constrainedVBR {
 		baseTargetQ3 += int(e.vbrOffset) >> lmDiff
 	}
@@ -2262,7 +2259,7 @@ func (e *Encoder) computeTargetBits(frameSize int, tfEstimate float32, pitchChan
 	// base_target = vbr_rate - ((40*C+20)<<BITRES)
 	channels := e.codedChannels()
 	overheadQ3 := (40*channels + 20) << bitRes
-	baseTargetQ3 := max(vbrRateQ3-overheadQ3, 0)
+	baseTargetQ3 := vbrRateQ3 - overheadQ3
 	if e.constrainedVBR {
 		// libopus line 2453-2454: base_target += (vbr_offset >> lm_diff)
 		baseTargetQ3 += int(e.vbrOffset) >> lmDiff
@@ -2512,9 +2509,6 @@ func (e *Encoder) computeVBRTargetWithBoost(baseTargetQ3, frameSize int, tfEstim
 	maxTarget := 2 * baseTargetQ3
 	if targetQ3 > maxTarget {
 		targetQ3 = maxTarget
-	}
-	if targetQ3 < 0 {
-		targetQ3 = 0
 	}
 
 	return targetQ3
