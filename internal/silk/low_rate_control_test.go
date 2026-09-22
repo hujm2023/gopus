@@ -20,3 +20,17 @@ func TestLowRateControlMatchesUnorderedLimits(t *testing.T) {
 		}
 	}
 }
+
+func TestStereoPrefillRateIgnoresPriorPacketLayout(t *testing.T) {
+	e := NewEncoder(BandwidthMediumband)
+	e.nFramesPerPacket = 3
+	e.nFramesEncoded = 2
+	e.nBitsUsedLBRR = 400
+	e.nBitsExceeded = 100
+	if got := e.StereoPrefillTargetRate(23867); got != 23600 {
+		t.Fatalf("10 ms prefill target=%d want 23600", got)
+	}
+	if e.nBitsUsedLBRR != 400 || e.nFramesPerPacket != 3 || e.nBitsExceeded != 100 {
+		t.Fatal("prefill calculation changed the pending packet state")
+	}
+}

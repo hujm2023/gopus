@@ -2461,10 +2461,6 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 	e.silkEncoder.SetDTX(e.silkUseDTX)
 	if e.channels == 2 {
 		e.ensureSILKSideEncoder()
-		var savedSideLP silk.LPState
-		if preserveLP {
-			savedSideLP = e.silkSideEncoder.GetLPState()
-		}
 		if preserveLP {
 			e.silkSideEncoder.ResetForBandwidthPrefill()
 		} else {
@@ -2472,7 +2468,7 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 		}
 		e.silkSideEncoder.ResetTransitionPrefillState()
 		if preserveLP {
-			e.silkSideEncoder.SetLPState(savedSideLP)
+			e.silkSideEncoder.SetLPState(savedMainLP)
 		}
 		e.silkSideEncoder.SetComplexity(int(e.complexity))
 		e.silkSideEncoder.SetReducedDependency(e.predictionDisabled)
@@ -2602,7 +2598,7 @@ func (e *Encoder) runSilkStereoTransitionPrefill(prefill []opusRes, prefillFrame
 
 	// Prefill is always 10 ms, but its target is the actual packet's SILK
 	// allocation, not the bitrate of the complete Opus stream.
-	totalRate := e.silkEncoder.StereoAllocationTargetRate(silkBitrate, len(left), 0)
+	totalRate := e.silkEncoder.StereoPrefillTargetRate(silkBitrate)
 	fsKHz := targetRate / 1000
 	if fsKHz <= 0 {
 		fsKHz = 16
@@ -4888,7 +4884,16 @@ func (e *Encoder) controlSILKBandwidth(mode Mode) {
 		e.silkEncoder.SetLPState(lp)
 	}
 	if e.silkSideEncoder != nil {
-		e.silkSideEncoder.SetLPState(lp)
+		var sideLP silk.LPState
+		sideCurrent := 0
+		if !e.first && e.prevMode != ModeCELT {
+			sideLP = e.silkSideEncoder.GetLPState()
+			sideCurrent = e.silkSideEncoder.SampleRate()
+		}
+		// Bandwidth control runs independently per channel. The side sample rate
+		// is forced to the mid rate later, but its filter memory remains its own.
+		sideLP.ControlBandwidth(sideCurrent, desired, minimum, e.silkMaxInternalRate, int(e.sampleRate), allow, e.silkOpusCanSwitch)
+		e.silkSideEncoder.SetLPState(sideLP)
 	}
 }
 

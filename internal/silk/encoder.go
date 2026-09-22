@@ -864,6 +864,12 @@ func (e *Encoder) StereoAllocationTargetRate(targetRateBps, frameLength, bitsUse
 	return stereoAllocationTargetRate(e, targetRateBps, frameLength, bitsUsedSoFar)
 }
 
+// StereoPrefillTargetRate uses the fixed 10 ms prefill packet without charging
+// prior-packet LBRR or dividing by its frame count (silk enc_API.c).
+func (e *Encoder) StereoPrefillTargetRate(bitrate int) int {
+	return silkLimitInt((bitrate/100)*100-2*int(e.nBitsExceeded), bitrate, 5000)
+}
+
 // SetPreAdjustedTargetRateBps provides a one-shot frame target that already
 // includes packet-level reservoir/bits-balance adjustments. Shared stereo
 // packet control uses this to avoid applying the same packet correction once
