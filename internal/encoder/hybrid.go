@@ -1014,15 +1014,10 @@ func (e *Encoder) resampleHybridSILKLowband(samples []opusRes, frameSize int) []
 // In libopus, gain_fade operates in-place on pcm_buf which already contains
 // the delay-compensated samples.
 func (e *Encoder) applyHBGainFade(pcm []opusRes, hbGain opusVal16) []opusRes {
-	// Apply gain fade if gain changed
-	prevGain := e.hybridState.prevHBGain
-	if prevGain != hbGain {
-		pcm = e.applyGainFade(pcm, prevGain, hbGain)
-	} else if hbGain < 1.0 {
-		// Apply constant gain if less than 1.0
-		for i := range pcm {
-			pcm[i] *= hbGain
-		}
+	// libopus applies the window even when both gains are equal: the two
+	// rounded products can differ from a single constant-gain multiply.
+	if e.hybridState.prevHBGain < 1.0 || hbGain < 1.0 {
+		pcm = e.applyGainFade(pcm, e.hybridState.prevHBGain, hbGain)
 	}
 
 	return pcm
@@ -1033,11 +1028,12 @@ func (e *Encoder) applyHBGainFade(pcm []opusRes, hbGain opusVal16) []opusRes {
 func (e *Encoder) applyGainFade(samples []opusRes, g1, g2 opusVal16) []opusRes {
 	channels := int(e.channels)
 	frameSize := len(samples) / channels
-	overlap := min(hybridOverlap, frameSize)
+	inc := max(1, 48000/int(e.sampleRate))
+	overlap := min(hybridOverlap/inc, frameSize)
 
 	// Generate CELT window for smooth transition.
-	window := celt.GetWindowBufferF32(overlap)
-	if window == nil || len(window) < overlap {
+	window := celt.GetWindowBufferF32(hybridOverlap)
+	if window == nil || len(window) < overlap*inc {
 		// Fallback: use simple linear fade
 		return e.applyLinearGainFade(samples, g1, g2, overlap)
 	}
@@ -1045,9 +1041,9 @@ func (e *Encoder) applyGainFade(samples []opusRes, g1, g2 opusVal16) []opusRes {
 	// Apply windowed gain fade during overlap region
 	if channels == 1 {
 		for i := range overlap {
-			w := opusVal16(window[i])
+			w := opusVal16(window[i*inc])
 			w2 := w * w // Square the window (libopus does this)
-			g := g1*(1-w2) + g2*w2
+			g := w2*g2 + (1-w2)*g1
 			samples[i] *= g
 		}
 		// Apply constant g2 for rest of frame
@@ -1056,9 +1052,9 @@ func (e *Encoder) applyGainFade(samples []opusRes, g1, g2 opusVal16) []opusRes {
 		}
 	} else {
 		for i := range overlap {
-			w := opusVal16(window[i])
+			w := opusVal16(window[i*inc])
 			w2 := w * w
-			g := g1*(1-w2) + g2*w2
+			g := w2*g2 + (1-w2)*g1
 			samples[i*2] *= g
 			samples[i*2+1] *= g
 		}
@@ -1445,6 +1441,8 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 	e.celtEncoder.SetSilkInfo(silkSignalType, silkOffset)
 	e.celtEncoder.SetPrediction(e.celtPredictionModeForFrame())
 
+	pcm, frameSize = e.celtEncoder.PrepareHybridPCM(pcm, frameSize)
+
 	// Ensure CELT scratch buffers are properly sized for this frame.
 	// The hybrid path bypasses EncodeFrame, so we must initialize them here.
 	e.celtEncoder.EnsureScratch(frameSize)
@@ -1548,6 +1546,7 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 	if len(mdctCoeffs) == 0 {
 		return
 	}
+	e.celtEncoder.ScaleHybridMDCT(mdctCoeffs, frameSize)
 	// Keep float-path cadence aligned with libopus (opus_res/celt_sig are float).
 
 	// Compute band energies
