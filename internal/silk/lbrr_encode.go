@@ -147,6 +147,7 @@ func (e *Encoder) encodeLBRRData(re *rangecoding.Encoder, nChannels int, include
 	// Track LBRR bits: start measuring AFTER the VAD/FEC header reservation,
 	// matching libopus enc_API.c: curr_nBitsUsedLBRR = ec_tell(psRangeEnc);
 	lbrrBitsStart := re.Tell()
+	clearLBRRFlagsOnReset(e)
 
 	// Encode LBRR flags
 	lbrrSymbol := 0
@@ -243,6 +244,17 @@ func (e *Encoder) applyLBRRReservoirUpdate() {
 	e.currNBitsUsedLBRR = 0
 }
 
+// clearLBRRFlagsOnReset mirrors the first_frame_after_reset half of libopus
+// enc_API.c:262-268.
+func clearLBRRFlagsOnReset(enc *Encoder) {
+	if enc == nil || !enc.firstFrameAfterResetActive() {
+		return
+	}
+	for i := range enc.lbrrFlags {
+		enc.lbrrFlags[i] = 0
+	}
+}
+
 // encodeLBRRFlagSymbol writes per-frame LBRR flags for one channel and returns the flag.
 func encodeLBRRFlagSymbol(re *rangecoding.Encoder, enc *Encoder, nFrames int) int {
 	lbrrSymbol := 0
@@ -273,6 +285,12 @@ func encodeStereoLBRRPacket(
 	}
 
 	lbrrBitsStart := re.Tell()
+	// libopus enc_API.c:262-268 clears a channel's pending LBRR flags before the
+	// packet's LBRR header is written when that channel starts a first frame after
+	// a codec reset, so the packet carries no in-band FEC even though a previous
+	// frame in it set a flag.
+	clearLBRRFlagsOnReset(midEnc)
+	clearLBRRFlagsOnReset(sideEnc)
 	encodeLBRRFlagSymbol(re, midEnc, nFrames)
 	encodeLBRRFlagSymbol(re, sideEnc, nFrames)
 

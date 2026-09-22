@@ -665,7 +665,9 @@ func (e *Encoder) ResetPacketState() {
 	e.stereoCondMidFramesEncoded = 0
 	e.stereoChannelIdx = 0
 	e.stereoPrevDecodeOnlyMiddle = 0
-	e.forceFirstFrameAfterReset = e.reducedDependency
+	if e.reducedDependency {
+		e.forceFirstFrameAfterReset = true
+	}
 	e.setupLBRRForNewPacket()
 }
 
@@ -934,9 +936,6 @@ func (e *Encoder) SetVBR(vbr bool) {
 // This mirrors libopus OPUS_SET_PREDICTION_DISABLED SILK behavior.
 func (e *Encoder) SetReducedDependency(enabled bool) {
 	e.reducedDependency = enabled
-	if !enabled {
-		e.forceFirstFrameAfterReset = false
-	}
 }
 
 // ReducedDependency reports whether reduced dependency coding is enabled.
