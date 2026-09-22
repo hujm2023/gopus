@@ -279,6 +279,9 @@ func (e *Encoder) decideDTXSuppress(activity bool, frameSize int) bool {
 // exactly as libopus does before the payload is discarded for a suppressed
 // sub-frame.
 //
+// The activity and peak-energy update always runs; only the suppression decision
+// itself is gated on DTX, because libopus tracks both for every coded frame.
+//
 // subVADPCM is the unfiltered sub-frame PCM (the same buffer the whole-frame VAD
 // would use). When vadAlreadyComputed is true the caller has already populated
 // the Opus-level VAD decision (e.g. the DRED path ran updateOpusVADRes for this
@@ -288,9 +291,14 @@ func (e *Encoder) decideDTXSuppress(activity bool, frameSize int) bool {
 // Returns true when the sub-frame should be emitted as a length-0 (suppressed)
 // frame in the repacketized packet.
 func (e *Encoder) subframeDTXSuppress(mode Mode, subVADPCM []opusRes, subFrameSize int, vadAlreadyComputed bool) bool {
-	if !e.dtxEnabled || e.dtx == nil || e.silkUseDTX {
+	if e.dtx == nil {
 		return false
 	}
+	// The Opus-level activity decision and the peak-signal-energy tracker are
+	// not DTX-only state: libopus computes them in opus_encode_frame_native
+	// (opus_encoder.c:1888-1930) for every coded frame, and the tracked peak
+	// feeds the SILK VAD clamp in silk_encode_do_VAD_Fxx. They must therefore be
+	// updated even when DTX is disabled.
 	if !vadAlreadyComputed {
 		// Compute the Opus-level activity + peak-energy tracking for this
 		// sub-frame exactly as the whole-frame path does for short packets.
@@ -299,6 +307,9 @@ func (e *Encoder) subframeDTXSuppress(mode Mode, subVADPCM []opusRes, subFrameSi
 		} else {
 			e.updateOpusVADRes(subVADPCM, subFrameSize)
 		}
+	}
+	if !e.dtxEnabled || e.silkUseDTX {
+		return false
 	}
 	activity := e.resolveDTXActivity()
 	return e.decideDTXSuppress(activity, subFrameSize)
