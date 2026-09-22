@@ -686,3 +686,27 @@ func TestComputeBandEnergiesIntegration(t *testing.T) {
 		}
 	}
 }
+
+// TestCoarseAvailableBytesOverride pins the plumbing libopus relies on:
+// quant_coarse_energy() receives nbAvailableBytes = nbCompressedBytes -
+// nbFilledBytes, which the hybrid CELT leg supplies through
+// SetCoarseEnergyAvailableBytes. The override must win over the budget-derived
+// default, and must never exceed the frame's own budget.
+func TestCoarseAvailableBytesOverride(t *testing.T) {
+	e := &Encoder{}
+	if got := e.coarseNbAvailableBytesForBudget(952); got != 119 {
+		t.Fatalf("default nbAvailableBytes = %d, want 119", got)
+	}
+	e.SetCoarseEnergyAvailableBytes(6)
+	if got := e.coarseNbAvailableBytesForBudget(952); got != 6 {
+		t.Fatalf("override nbAvailableBytes = %d, want 6", got)
+	}
+	e.SetCoarseEnergyAvailableBytes(500)
+	if got := e.coarseNbAvailableBytesForBudget(952); got != 119 {
+		t.Fatalf("clamped nbAvailableBytes = %d, want 119", got)
+	}
+	e.SetCoarseEnergyAvailableBytes(-3)
+	if got := e.coarseNbAvailableBytesForBudget(952); got != 119 {
+		t.Fatalf("negative override must clear, got %d", got)
+	}
+}

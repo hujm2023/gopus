@@ -1591,14 +1591,13 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 		// Ensure we don't end up with negative budgets if SILK used more bits.
 		totalBits = used + 8
 	}
-	// Match libopus quant_coarse_energy() nbAvailableBytes for hybrid CBR:
-	// bytes available to CELT at entry (after already-coded SILK/range bits).
-	e.celtEncoder.SetCoarseEnergyAvailableBytes(0)
-	if e.bitrateMode == ModeCBR {
-		nbFilledBytes := (re.Tell() + 4) >> 3
-		nbAvailableBytes := max(targetPayloadBytes-nbFilledBytes, 0)
-		e.celtEncoder.SetCoarseEnergyAvailableBytes(nbAvailableBytes)
-	}
+	// Match libopus quant_coarse_energy() nbAvailableBytes, which is
+	// nbCompressedBytes - nbFilledBytes: the bytes the CELT leg still has at entry,
+	// after the already-coded SILK/range bits. libopus computes this for both CBR
+	// and VBR, and the value feeds the coarse-energy intra decision
+	// (nbAvailableBytes > codedBands*C) and the max_decay clamp.
+	nbFilledBytes := (re.Tell() + 4) >> 3
+	e.celtEncoder.SetCoarseEnergyAvailableBytes(max(targetPayloadBytes-nbFilledBytes, 0))
 	defer e.celtEncoder.SetCoarseEnergyAvailableBytes(0)
 
 	// Mirror libopus effectiveBytes staging for hybrid before transient analysis.
@@ -1608,7 +1607,6 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 		baseBits := e.celtEncoder.BitrateToBits(frameSize)
 		effectiveBytes = baseBits / 8
 	} else {
-		nbFilledBytes := (re.Tell() + 4) >> 3
 		effectiveBytes = max(targetPayloadBytes-nbFilledBytes, 0)
 	}
 	allowWeakTransients := effectiveBytes < 15 && silkSignalType != 2
@@ -1659,7 +1657,7 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 		}
 	}
 
-	nbFilledBytes := (re.Tell() + 4) >> 3
+	nbFilledBytes = (re.Tell() + 4) >> 3
 	nbAvailableBytes := max(targetPayloadBytes-nbFilledBytes, 0)
 	e.celtEncoder.ApplyHybridPrefilter(preemph, frameSize, tfEstimate, nbAvailableBytes, toneFreq, toneishness)
 
