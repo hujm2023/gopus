@@ -142,6 +142,15 @@ func ldEncoderPCM(tc ldMatrixCase, pcm []float32) ([][]byte, error) {
 	if err := enc.SetSignal(tc.signal); err != nil {
 		return nil, fmt.Errorf("set signal: %w", err)
 	}
+	if tc.channels == 2 {
+		// Mirror the oracle helper: tools/csrc/libopus_vbr_cvbr_encode_info.c:174-176
+		// sets OPUS_SET_FORCE_CHANNELS(2) for stereo inputs. Without it the rate
+		// dependent mono/stereo decision legitimately picks mono here (2.5 ms
+		// frames make equiv_rate negative) and every TOC stereo bit differs.
+		if err := enc.SetForceChannels(2); err != nil {
+			return nil, fmt.Errorf("set force channels: %w", err)
+		}
+	}
 	// VBR unconstrained — matches oracle mode=0.
 	enc.SetVBR(true)
 	enc.SetVBRConstraint(false)
