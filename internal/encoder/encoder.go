@@ -972,11 +972,11 @@ func (e *Encoder) EncodeWithAnalysisMaxBytes(pcm []float32, frameSize int, analy
 // refreshAnalysis, if non-nil, runs the tonality analyzer on the untouched input
 // before any high-pass/DC/LSB processing, matching libopus run_analysis ordering.
 //
-// The function applies LSB quantization and the variable high-pass / DC-reject
-// filters, refreshes the SILK variable-HP-cutoff smoother in the
-// hp_cutoff-before-silk_Encode order libopus uses, handles the "too little
-// space" TOC-only fast path, selects the coding mode and bandwidth (auto chain or
-// forced mode), performs delay compensation and mode-transition prefill, drives
+// The function applies LSB quantization, handles the "too little space"
+// TOC-only fast path before advancing filter state, then applies high-pass /
+// DC-reject and refreshes the SILK variable-HP-cutoff smoother in the
+// hp_cutoff-before-silk_Encode order. It selects coding mode and bandwidth
+// (auto chain or forced mode), performs delay compensation and mode-transition prefill, drives
 // the SILK/CELT/Hybrid sub-encoders under the active rate-control mode, and
 // returns the assembled packet (or nil when more lookahead input is still
 // buffered). It returns ErrInvalidFrameSize / ErrEncodingFailed for malformed
@@ -1025,20 +1025,6 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 	lookaheadSamples := 0
 	vadPCM := inputPCM
 	pcmRes := e.quantizeInputToLSBDepth(inputPCM)
-	pcmRes = e.preprocessInputHP(pcmRes, frameSize)
-	// Update the SILK variable-HP-cutoff smoother AFTER the Opus-level hp_cutoff
-	// reads variable_HP_smth1_Q15. libopus' hp_cutoff (src/opus_encoder.c) runs
-	// before silk_Encode and reads the smth1 left by the prior packet's
-	// silk_HP_variable_cutoff, which executes inside silk_Encode (after hp_cutoff)
-	// and uses prevLag/prevSignalType/input_quality/speech_activity from the prior
-	// packet. This packet's pitch analysis has not run yet, so updating here —
-	// after hp_cutoff and before the SILK encode mutates prevLag — feeds hp_cutoff
-	// the prior packet's smth1, matching libopus: the smoothed cutoff is applied
-	// one packet after its smth1 update, keeping the int16 SILK-resampler input
-	// bit-exact across silk_log2lin cutoff boundaries.
-	if e.voipApp && e.silkEncoder != nil && e.mode != ModeCELT {
-		e.silkEncoder.UpdateVariableHPCutoff()
-	}
 	frameEnd := frameSize * channels
 	samplesNeeded := frameEnd + lookaheadSamples
 	directFrameInput := lookaheadSamples == 0 && len(e.inputBuffer) == 0
@@ -1100,6 +1086,21 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 			e.inputBuffer = e.inputBuffer[:remaining]
 		}
 		return pkt, nil
+	}
+
+	framePCM = e.preprocessInputHP(framePCM, frameSize)
+	// Update the SILK variable-HP-cutoff smoother AFTER the Opus-level hp_cutoff
+	// reads variable_HP_smth1_Q15. libopus' hp_cutoff (src/opus_encoder.c) runs
+	// before silk_Encode and reads the smth1 left by the prior packet's
+	// silk_HP_variable_cutoff, which executes inside silk_Encode (after hp_cutoff)
+	// and uses prevLag/prevSignalType/input_quality/speech_activity from the prior
+	// packet. This packet's pitch analysis has not run yet, so updating here —
+	// after hp_cutoff and before the SILK encode mutates prevLag — feeds hp_cutoff
+	// the prior packet's smth1, matching libopus: the smoothed cutoff is applied
+	// one packet after its smth1 update, keeping the int16 SILK-resampler input
+	// bit-exact across silk_log2lin cutoff boundaries.
+	if e.voipApp && e.silkEncoder != nil && e.mode != ModeCELT {
+		e.silkEncoder.UpdateVariableHPCutoff()
 	}
 
 	var requestedMode Mode
