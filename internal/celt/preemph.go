@@ -274,17 +274,7 @@ func (e *Encoder) applyPreemphasisWithScalingAndSilenceCore(pcm []float32, outpu
 		e.preemphState[1] = celtSig(stateR)
 	}
 
-	e.overlapMax = float32(0)
-	if overlapMaxBits != 0 {
-		e.overlapMax = math.Float32frombits(overlapMaxBits)
-	}
-	sampleMax := e.overlapMax
-	firstMax := math.Float32frombits(firstMaxBits)
-	if firstMax > sampleMax {
-		sampleMax = firstMax
-	}
-	silenceThreshold := float32(math.Ldexp(1, -int(e.lsbDepth)))
-	return sampleMax <= silenceThreshold
+	return e.finishPreemphasisSilence(pcm, total, split, firstMaxBits, overlapMaxBits)
 }
 
 // applyPreemphasis2TapAndSilenceCore applies libopus's 2-tap CELT pre-emphasis
@@ -350,15 +340,27 @@ func (e *Encoder) applyPreemphasis2TapAndSilenceCore(pcm, output []float32, tota
 		e.preemphState[1] = celtSig(mR)
 	}
 
-	e.overlapMax = float32(0)
-	if overlapMaxBits != 0 {
-		e.overlapMax = math.Float32frombits(overlapMaxBits)
+	return e.finishPreemphasisSilence(pcm, total, split, firstMaxBits, overlapMaxBits)
+}
+
+// finishPreemphasisSilence matches celt_encode_with_ec's sample_max scan.
+// The scan uses the coded channel count, while pre-emphasis consumes every
+// input channel. Previous overlap energy also participates in this frame.
+func (e *Encoder) finishPreemphasisSilence(pcm []float32, total, split int, firstMaxBits, overlapMaxBits uint32) bool {
+	if coded := e.codedChannels(); coded != int(e.channels) {
+		total = total * coded / int(e.channels)
+		split = split * coded / int(e.channels)
+		firstMaxBits, overlapMaxBits = 0, 0
+		for _, v := range pcm[:split] {
+			firstMaxBits = updateMaxAbsBitsF32(firstMaxBits, v)
+		}
+		for _, v := range pcm[split:total] {
+			overlapMaxBits = updateMaxAbsBitsF32(overlapMaxBits, v)
+		}
 	}
-	sampleMax := e.overlapMax
-	firstMax := math.Float32frombits(firstMaxBits)
-	if firstMax > sampleMax {
-		sampleMax = firstMax
-	}
+	sampleMax := max(e.overlapMax, math.Float32frombits(firstMaxBits))
+	e.overlapMax = math.Float32frombits(overlapMaxBits)
+	sampleMax = max(sampleMax, e.overlapMax)
 	silenceThreshold := float32(math.Ldexp(1, -int(e.lsbDepth)))
 	return sampleMax <= silenceThreshold
 }
