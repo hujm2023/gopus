@@ -46,3 +46,20 @@ func TestHybridStereoContinuesPrefillMidVAD(t *testing.T) {
 		previous++
 	}
 }
+
+func TestSILKStereoPublishesMidVADForHybrid(t *testing.T) {
+	pcm, err := testsignal.GenerateCorpusSignal(testsignal.CorpusMixedV1, 48000, 1920, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := NewEncoder(48000, 2)
+	e.SetBitrate(32000)
+	e.SetForceChannels(2)
+	e.lastVADValid = false
+	if _, err := e.encodeSILKFrameWithDREDAndMax(pcm, nil, 960, 32000, 0, 1276); err != nil {
+		t.Fatal(err)
+	}
+	if !e.lastVADValid || e.lastVADActivityQ8 != int32(e.silkVADMidFeedback.SpeechActivityQ8) {
+		t.Fatal("standalone stereo SILK left stale mid activity for Hybrid rate allocation")
+	}
+}

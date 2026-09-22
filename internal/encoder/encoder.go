@@ -3320,7 +3320,13 @@ func (e *Encoder) encodeSILKFrameBody(pcm []opusRes, lookahead []opusRes, frameS
 		e.ensureSilkVADMidFeedback()
 		midFeedbackAnalyzer := func(frame []float32, frameSamples, fsKHz int) (silk.VADFrameState, bool) {
 			state, active := computeSilkVADFrameState(e.silkVADMidFeedback, frame, frameSamples, fsKHz)
-			return e.applyOpusVADToSilkState(state, active)
+			state, active = e.applyOpusVADToSilkState(state, active)
+			e.lastVADActivityQ8 = state.SpeechActivityQ8
+			e.lastVADInputTiltQ15 = state.InputTiltQ15
+			e.lastVADInputQualityBandsQ15 = state.InputQualityBandsQ15
+			e.lastVADActive = active
+			e.lastVADValid = state.Valid
+			return state, active
 		}
 		e.ensureSilkVADSide()
 		sideAnalyzer := func(frame []float32, frameSamples, fsKHz int) (silk.VADFrameState, bool) {
