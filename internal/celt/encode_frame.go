@@ -80,6 +80,7 @@ func (e *Encoder) quantizeInputToLSBDepthScratchF32(pcm []float32) []float32 {
 // celt_encoder.c: derive per-band dynalloc floors and surround trim from
 // externally supplied energy masks.
 func (e *Encoder) computeSurroundDynallocFromMask(nbBands int, out []celtGLog) (celtGLog, bool) {
+	e.surroundMasking = 0
 	if nbBands <= 0 || len(out) < nbBands {
 		return e.surroundTrim, false
 	}
@@ -144,8 +145,6 @@ func (e *Encoder) computeSurroundDynallocFromMask(nbBands int, out []celtGLog) (
 	if diff < -0.031 {
 		diff = -0.031
 	}
-	surroundTrim := 64.0 * diff
-
 	midband := 0
 	for midband+1 < len(EBands) && EBands[midband+1] < EBands[maskEnd]/2 {
 		midband++
@@ -174,6 +173,8 @@ func (e *Encoder) computeSurroundDynallocFromMask(nbBands int, out []celtGLog) (
 	if countDynalloc >= 3 {
 		maskAvg += 0.25
 		if maskAvg > 0 {
+			maskAvg = 0
+			diff = 0
 			for i := 0; i < maskEnd; i++ {
 				out[i] = 0
 			}
@@ -188,7 +189,8 @@ func (e *Encoder) computeSurroundDynallocFromMask(nbBands int, out []celtGLog) (
 		}
 	}
 
-	return surroundTrim, true
+	e.surroundMasking = maskAvg + 0.2
+	return 64 * diff, true
 }
 
 // EncodeFrame encodes a complete CELT frame from PCM samples.
@@ -465,10 +467,9 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 	// Keep stateful prefilter output on float32 precision to match libopus float path.
 
 	e.lastPitchChange = false
-	if prevPrefilterPeriod > 0 && (pfResult.gain > 0.4 || prevPrefilterGain > 0.4) {
-		upper := int(float32(1.26) * float32(prevPrefilterPeriod))
-		lower := int(float32(0.79) * float32(prevPrefilterPeriod))
-		e.lastPitchChange = pfResult.pitch > upper || pfResult.pitch < lower
+	if (pfResult.gain > 0.4 || prevPrefilterGain > 0.4) && (!e.analysisValid || float64(e.analysisTonality) > .3) {
+		e.lastPitchChange = float64(pfResult.pitch) > 1.26*float64(prevPrefilterPeriod) ||
+			float64(pfResult.pitch) < .79*float64(prevPrefilterPeriod)
 	}
 
 	if !e.IsHybrid() && start == 0 && re.Tell()+16 <= targetBits {
@@ -1197,7 +1198,7 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 			initialQextBytes := max(targetBytes-1275, max(0, (targetBytes-offsetBytes)*4/5))
 			overheadQ3 := (40*codedChannels + 20) << bitRes
 			baseQ3 := max((targetBytes-initialQextBytes/3)*8<<bitRes-overheadQ3, 0)
-			vbrQ3 := e.computeVBRTargetWithBoost(baseQ3, frameSize, tf2, e.lastPitchChange, totalBoost)
+			vbrQ3 := e.computeVBRTarget(baseQ3, frameSize, tf2, e.lastPitchChange)
 			vbrQ3 += re.TellFrac()
 			cbrVBRTargetBytes = max((vbrQ3+(1<<(bitRes+2)))>>(bitRes+3), 0)
 		}
@@ -2177,7 +2178,7 @@ func (e *Encoder) computeFinalVBRTargetBytes(frameSize int, tfEstimate float32, 
 			}
 		}
 	} else {
-		targetQ3 = e.computeVBRTargetWithBoost(baseTargetQ3, frameSize, tfEstimate, pitchChange, totalBoost)
+		targetQ3 = e.computeVBRTarget(baseTargetQ3, frameSize, tfEstimate, pitchChange)
 	}
 	targetQ3 += tellFrac
 
@@ -2467,6 +2468,13 @@ func (e *Encoder) computeVBRTargetWithBoost(baseTargetQ3, frameSize int, tfEstim
 			tonalTarget += int(float32(codedBins<<bitRes) * 0.8)
 		}
 		targetQ3 = tonalTarget
+	}
+
+	// The surround mask reduces the target before the depth limit. The CELT
+	// float macros preserve this product without fixed-point shifts.
+	if len(e.energyMask) > 0 && !e.lfe && !e.hybrid {
+		surroundTarget := targetQ3 + int(e.surroundMasking*float32(codedBins<<bitRes))
+		targetQ3 = max(targetQ3/4, surroundTarget)
 	}
 
 	// floor_depth limit from maxDepth.

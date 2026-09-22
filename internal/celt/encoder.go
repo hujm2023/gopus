@@ -145,7 +145,8 @@ type Encoder struct {
 	analysisMaxPitchRatio opusVal16
 	// Surround trim adjustment (in trim units) used by alloc_trim analysis.
 	// This mirrors libopus alloc_trim_analysis() surround_trim contribution.
-	surroundTrim celtGLog
+	surroundTrim    celtGLog
+	surroundMasking celtGLog
 
 	// energyMask stores per-band surround masking provided by multistream control.
 	// Layout matches libopus OPUS_SET_ENERGY_MASK: [21] for mono, [42] for stereo.
@@ -482,6 +483,7 @@ func (e *Encoder) Reset() {
 		e.analysisLeakBoost[i] = 0
 	}
 	e.surroundTrim = 0
+	e.surroundMasking = 0
 	if len(e.energyMask) > 0 {
 		clear(e.energyMask)
 		e.energyMask = e.energyMask[:0]
