@@ -325,6 +325,7 @@ func applyLFEBandLogEClamp(energies []celtGLog, nbBands, channels int) {
 // computeBandRMS computes the per-band log2 amplitude from MDCT coefficients.
 // Returns log2(sqrt(sum(x^2))) using the same epsilon as libopus.
 // This matches libopus compute_band_energies() + amp2Log2() (float path).
+// Keep the rounded square root: 0.5*log2(sumSq) can cross dynalloc boundaries.
 func computeBandRMS(coeffs []float32, start, end int) float32 {
 	if end <= start || start < 0 || end > len(coeffs) {
 		return float32(0.5) * celtLog2(float32(1e-27))
@@ -339,7 +340,7 @@ func computeBandRMS(coeffs []float32, start, end int) float32 {
 	// Compute sum of squares with the same accumulation order libopus uses
 	// for celt_inner_prod() on the active architecture.
 	sumSq := float32(1e-27) + celtInnerProdF32LibopusOrder(c)
-	return float32(0.5) * celtLog2(sumSq)
+	return celtLog2(celtSqrt(sumSq))
 }
 
 func computeBandRMSFloat32(coeffs []float32, start, end int) float32 {
@@ -352,7 +353,7 @@ func computeBandRMSFloat32(coeffs []float32, start, end int) float32 {
 		return celtLog2(celtSqrt(sumSq))
 	}
 	sumSq := float32(1e-27) + celtInnerProdF32LibopusOrder(c)
-	return float32(0.5) * celtLog2(sumSq)
+	return celtLog2(celtSqrt(sumSq))
 }
 
 // celtSqrt mirrors libopus celt_sqrt in the float build: (float)sqrt((double)x).

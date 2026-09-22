@@ -9,6 +9,28 @@ import (
 	"github.com/hujm2023/gopus/internal/rangecoding"
 )
 
+// TestBandLogAmplitudeRounding retains a dynalloc boundary from frame 95 of
+// the 5 ms mono impulse corpus. The coefficients match libopus bit-for-bit;
+// replacing log2(sqrt(sumSq)) with 0.5*log2(sumSq) changes the band energy by
+// one ULP and removes a 16-unit dynamic-allocation boost.
+func TestBandLogAmplitudeRounding(t *testing.T) {
+	coeffs := []float32{1.44139802, 4.18147659}
+	// Pinned libopus 1.6.1 compute_band_energies + amp2Log2 output for band 3.
+	want := float32(-3.16749525)
+	for name, compute := range map[string]func([]float32, int, int) float32{
+		"band":    computeBandRMS,
+		"float32": computeBandRMSFloat32,
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := compute(coeffs, 0, len(coeffs)) - float32(eMeans[3]*DB6)
+			if math.Float32bits(got) != math.Float32bits(want) {
+				t.Fatalf("band log amplitude = %.9g (%08x), want %.9g (%08x)",
+					got, math.Float32bits(got), want, math.Float32bits(want))
+			}
+		})
+	}
+}
+
 // TestComputeBandEnergies verifies band energy computation.
 func TestComputeBandEnergies(t *testing.T) {
 	t.Run("ZeroInput", func(t *testing.T) {
