@@ -396,13 +396,13 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 	silkMaxBits = e.silkBandwidthMaxBits(silkMaxBits, frameSize)
 	e.silkEncoder.SetMaxBits(silkMaxBits)
 	if e.silkInternalChannels() == 2 {
-		e.silkSideEncoder.ResetPacketState()
 		e.silkSideEncoder.SetFEC(e.lbrrCoded)
 		e.silkSideEncoder.SetPacketLoss(int(e.packetLoss))
+		e.silkSideEncoder.ResetPacketState()
 		e.silkSideEncoder.SetVBR(true)
 		e.silkSideEncoder.SetMaxBits(silkMaxBits)
 	}
-	e.encodeSILKHybrid(silkInput, silkLookahead, frameSize, silkBitrate)
+	e.encodeSILKHybrid(silkInput, silkLookahead, frameSize, silkBitrate, silkMaxBits)
 
 	// Retrieve SILK signal info for CELT VBR target feedback.
 	// Per libopus opus_encoder.c line 2420-2424: after SILK encodes, its signal
@@ -1215,7 +1215,7 @@ func (e *Encoder) applyLinearGainFade(samples []opusRes, g1, g2 opusVal16, overl
 // - Encode stereo prediction weights
 // - Encode mid channel with main SILK encoder
 // - Encode side channel with side SILK encoder
-func (e *Encoder) encodeSILKHybrid(pcm []float32, lookahead []float32, frameSize int, totalRateBps int) {
+func (e *Encoder) encodeSILKHybrid(pcm []float32, lookahead []float32, frameSize int, totalRateBps, maxBits int) {
 	// For hybrid mode, SILK always operates at WB (16kHz)
 	// The input is already downsampled to 16kHz
 
@@ -1227,7 +1227,7 @@ func (e *Encoder) encodeSILKHybrid(pcm []float32, lookahead []float32, frameSize
 		e.encodeSILKHybridMono(pcm, lookahead, silkSamples, totalRateBps)
 	} else {
 		// Stereo encoding
-		e.encodeSILKHybridStereo(pcm, lookahead, silkSamples, totalRateBps)
+		e.encodeSILKHybridStereo(pcm, lookahead, silkSamples, totalRateBps, maxBits)
 	}
 }
 
@@ -1297,7 +1297,7 @@ func (e *Encoder) encodeSILKHybridMono(pcm []float32, lookahead []float32, silkS
 
 // encodeSILKHybridStereo encodes stereo SILK data for hybrid mode.
 // Uses mid-side encoding per RFC 6716 Section 4.2.8.
-func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, silkSamples int, totalRateBps int) {
+func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, silkSamples int, totalRateBps, maxBits int) {
 	// Deinterleave L/R channels and append 2-sample lookahead for LP filtering.
 	actualSamples := len(pcm) / 2
 	if actualSamples < silkSamples {
@@ -1335,6 +1335,15 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 		right[silkSamples+1] = lastR
 	}
 
+	// Previous-packet stereo redundancy must precede this frame's rate split.
+	re := e.silkEncoder.GetRangeEncoderPtr()
+	if re == nil {
+		return
+	}
+	e.silkSideEncoder.SetRangeEncoder(re)
+	e.silkSideEncoder.SetBitsExceeded(e.silkEncoder.BitsExceeded())
+	lbrrMid, lbrrSide := e.silkEncoder.EncodeHybridStereoLBRR(re, e.silkSideEncoder)
+
 	// Apply packet rate control once, before splitting into channel targets.
 	targetRate := e.silkEncoder.StereoAllocationTargetRate(totalRateBps, silkSamples, 0)
 	// Convert to mid-side with libopus-aligned stereo front-end.
@@ -1342,6 +1351,7 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 	mid, side, predIdx, midOnly, midRate, sideRate, widthQ14 := e.silkEncoder.StereoLRToMSWithRates(
 		left, right, silkSamples, fsKHz, targetRate, e.lastVADActivityQ8, false,
 	)
+	e.silkEncoder.SaveStereoLBRR(predIdx, midOnly)
 	if e.hybridState != nil {
 		e.hybridState.silkStereoWidthQ14 = widthQ14
 	}
@@ -1353,6 +1363,8 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 	if e.silkSideEncoder != nil && sideRate > 0 {
 		e.silkSideEncoder.SetBitrate(sideRate)
 		e.silkSideEncoder.SetPreAdjustedTargetRateBps(sideRate)
+		// The mid channel gets at most half of the shared frame budget.
+		e.silkEncoder.SetMaxBits(maxBits - maxBits/2)
 	}
 
 	// Compute VAD flags
@@ -1371,38 +1383,7 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 		}
 	}
 
-	// Get shared range encoder
-	re := e.silkEncoder.GetRangeEncoderPtr()
-	if re == nil {
-		return
-	}
-	if e.silkSideEncoder != nil {
-		e.silkSideEncoder.SetRangeEncoder(re)
-		// Keep side packet bit-reservoir state aligned with the shared SILK packet state.
-		e.silkSideEncoder.SetBitsExceeded(e.silkEncoder.BitsExceeded())
-	}
-
-	// LBRR flags
-	lbrrMid := false
-	lbrrSide := false
-	if e.lbrrCoded {
-		lbrrMid = e.silkEncoder.HasLBRRData()
-		if e.silkSideEncoder != nil && !midOnly {
-			lbrrSide = e.silkSideEncoder.HasLBRRData()
-		}
-	}
-
-	// Header bits to patch at packet start (VAD/LBRR)
-	nBitsHeader := 2
-
-	// 1. Reserve header bits (VAD + LBRR) and encode any LBRR Mid data.
-	// Use nChannels=2 to reserve space for both Mid+Side flags.
-	e.silkEncoder.EncodeLBRRData(re, 2, true)
-
-	// 2. Encode LBRR Side (no header placeholder; already reserved).
-	if e.lbrrCoded && e.silkSideEncoder != nil && !midOnly {
-		e.silkSideEncoder.EncodeLBRRData(re, 1, false)
-	}
+	const nBitsHeader = 2
 
 	// 3. Encode Weights (pre-quantized indices)
 	silk.EncodeStereoIndices(re, predIdx)

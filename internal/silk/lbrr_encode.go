@@ -209,6 +209,22 @@ func (e *Encoder) EncodeLBRRData(re *rangecoding.Encoder, nChannels int, include
 	e.encodeLBRRData(re, nChannels, includeHeader)
 }
 
+// EncodeHybridStereoLBRR writes a single-frame stereo packet header and its
+// previous-packet redundancy before the caller derives the new stereo rate.
+func (e *Encoder) EncodeHybridStereoLBRR(re *rangecoding.Encoder, side *Encoder) (bool, bool) {
+	re.EncodeICDF16(0, []uint16{240, 0}, 8)
+	encodeStereoLBRRPacket(re, e, side, 1, &e.stereo)
+	e.applyLBRRReservoirUpdate()
+	// Stereo orchestration already consumed the shared redundancy budget.
+	e.stereoCondMid = e
+	return e.lbrrFlag != 0, side.lbrrFlag != 0
+}
+
+// SaveStereoLBRR stores the prediction metadata alongside the current payload.
+func (e *Encoder) SaveStereoLBRR(ix StereoQuantIndices, midOnly bool) {
+	e.stereo.saveLBRRStereoMeta(0, ix, midOnly)
+}
+
 // applyLBRRReservoirUpdate folds this frame's LBRR header bits (currNBitsUsedLBRR)
 // into the nBitsUsedLBRR exponential moving average and consumes the count. This
 // is the per-frame update libopus enc_API.c runs inside the rate-control loop
