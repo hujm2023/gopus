@@ -880,6 +880,35 @@ func (e *Encoder) silkInputBitrate(frameSize int) int {
 	return e.surroundSILKBitrate(max(0, bitsToBitrateFs(bits, int(e.sampleRate), frameSize)), false)
 }
 
+// silkInputBitrateWithReserve mirrors libopus bits_target when the frame reserves
+// incoming transition redundancy (opus_encoder.c:1960):
+//
+//	bits_target = min(8*(max_data_bytes-redundancy_bytes), bitrate_to_bits(...)) - 8
+//
+// and converts the result back to a rate. maxDataBytes is the same byte budget
+// libopus would pass as max_data_bytes, so the reserved bytes cap the target
+// before the 8-bit signalling reservation is removed.
+func (e *Encoder) silkInputBitrateWithReserve(frameSize, maxDataBytes, redundancyBytes int) int {
+	if e.bitrate <= 0 || frameSize <= 0 {
+		return 0
+	}
+	if maxDataBytes <= 0 {
+		maxDataBytes = libopusMaxDataBytesCap
+	}
+	if redundancyBytes < 0 {
+		redundancyBytes = 0
+	}
+	if redundancyBytes > maxDataBytes {
+		redundancyBytes = maxDataBytes
+	}
+	bits := 8 * (maxDataBytes - redundancyBytes)
+	if bitrateBits := bitrateToBitsFs(int(e.bitrate), int(e.sampleRate), frameSize); bits > bitrateBits {
+		bits = bitrateBits
+	}
+	bits -= 8
+	return e.surroundSILKBitrate(max(0, bitsToBitrateFs(bits, int(e.sampleRate), frameSize)), false)
+}
+
 // computeEquivRate calculates the equivalent bitrate based on frame rate, VBR mode,
 // complexity, and packet loss. Matches libopus compute_equiv_rate().
 func (e *Encoder) computeEquivRate(bitrate, channels, frameRate int32, vbr bool, actualMode Mode, complexity, loss int32) int32 {
@@ -3146,15 +3175,6 @@ func (e *Encoder) encodeSILKFrameWithDRED(pcm []opusRes, lookahead []opusRes, fr
 // multi-frame and low-space paths). It returns the raw SILK frame bytes.
 func (e *Encoder) encodeSILKFrameWithDREDAndMax(pcm []opusRes, lookahead []opusRes, frameSize, originalBitrate, dredBitrate, maxPacketBytes int) ([]byte, error) {
 	incomingSwitch := e.silkBWSwitch
-	if incomingSwitch {
-		e.runPendingSilkTransitionPrefill(true, false, e.silkInputBitrate(frameSize))
-	}
-	e.ensureSILKEncoder()
-	// Standalone SILK owns a new packet coder, including after Hybrid left
-	// its shared coder attached to the persistent SILK state.
-	e.silkEncoder.SetRangeEncoder(nil)
-	e.silkBWSwitch = false
-	e.silkRedundancyBytes = 0
 	maxBytes := maxPacketBytes
 	if maxBytes <= 0 {
 		maxBytes = libopusMaxDataBytesCap
@@ -3162,9 +3182,29 @@ func (e *Encoder) encodeSILKFrameWithDREDAndMax(pcm []opusRes, lookahead []opusR
 	if e.bitrateMode == ModeCBR {
 		maxBytes = min(maxBytes, e.targetBytesForBitrate(int(e.bitrate), frameSize))
 	}
+	// libopus folds the reserved incoming transition redundancy into bits_target
+	// before deriving the SILK target rate (opus_encoder.c:1949 then :1960), so
+	// both the transition prefill and the main SILK frame run at the reduced
+	// rate. Outgoing SILK->CELT redundancy is only chosen after SILK encodes
+	// (line 2255), so it never reduces the rate.
+	incomingRedundancyBytes := 0
+	if incomingSwitch {
+		incomingRedundancyBytes = computeRedundancyBytes(maxBytes, int(e.bitrate), int(e.sampleRate)/frameSize, e.silkInternalChannels())
+	}
+	silkInputRate := e.silkInputBitrate(frameSize)
+	if incomingSwitch {
+		silkInputRate = e.silkInputBitrateWithReserve(frameSize, maxBytes, incomingRedundancyBytes)
+		e.runPendingSilkTransitionPrefill(true, false, silkInputRate)
+	}
+	e.ensureSILKEncoder()
+	// Standalone SILK owns a new packet coder, including after Hybrid left
+	// its shared coder attached to the persistent SILK state.
+	e.silkEncoder.SetRangeEncoder(nil)
+	e.silkBWSwitch = false
+	e.silkRedundancyBytes = 0
 	needsRedundancy := !e.restrictedSilkApp && (incomingSwitch || (e.silkSwitchReady && !e.silkNonfinalFrame))
 	if !needsRedundancy {
-		data, err := e.encodeSILKFrameBody(pcm, lookahead, frameSize, originalBitrate, dredBitrate, maxPacketBytes)
+		data, err := e.encodeSILKFrameBody(pcm, lookahead, frameSize, originalBitrate, dredBitrate, maxPacketBytes, silkInputRate)
 		e.silkOpusCanSwitch = e.silkSwitchReady && !e.silkNonfinalFrame
 		if err == nil && len(data) > 0 {
 			e.applyNonHybridStereoWidthFade(nil, frameSize, ModeSILK)
@@ -3174,7 +3214,10 @@ func (e *Encoder) encodeSILKFrameWithDREDAndMax(pcm []opusRes, lookahead []opusR
 	var redundancy []byte
 	var redundancyErr error
 	if needsRedundancy {
-		bytes := computeRedundancyBytes(maxBytes, int(e.bitrate), int(e.sampleRate)/frameSize, e.silkInternalChannels())
+		bytes := incomingRedundancyBytes
+		if !incomingSwitch {
+			bytes = computeRedundancyBytes(maxBytes, int(e.bitrate), int(e.sampleRate)/frameSize, e.silkInternalChannels())
+		}
 		if incomingSwitch {
 			e.silkRedundancyReserve = bytes*8 + 1
 		}
@@ -3208,7 +3251,7 @@ func (e *Encoder) encodeSILKFrameWithDREDAndMax(pcm []opusRes, lookahead []opusR
 		})
 	}
 	defer func() { e.silkEncoder.SetPacketTermination(nil); e.silkRedundancyReserve = 0 }()
-	data, err := e.encodeSILKFrameBody(pcm, lookahead, frameSize, originalBitrate, dredBitrate, maxPacketBytes)
+	data, err := e.encodeSILKFrameBody(pcm, lookahead, frameSize, originalBitrate, dredBitrate, maxPacketBytes, silkInputRate)
 	e.silkOpusCanSwitch = e.silkSwitchReady && !e.silkNonfinalFrame
 	if err != nil {
 		return nil, err
@@ -3220,7 +3263,7 @@ func (e *Encoder) encodeSILKFrameWithDREDAndMax(pcm []opusRes, lookahead []opusR
 	return append(data, redundancy...), nil
 }
 
-func (e *Encoder) encodeSILKFrameBody(pcm []opusRes, lookahead []opusRes, frameSize, originalBitrate, dredBitrate, maxPacketBytes int) ([]byte, error) {
+func (e *Encoder) encodeSILKFrameBody(pcm []opusRes, lookahead []opusRes, frameSize, originalBitrate, dredBitrate, maxPacketBytes, silkInputRate int) ([]byte, error) {
 	e.ensureSILKEncoder()
 	pcm32 := e.scratchPCM32[:len(pcm)]
 	copy(pcm32, pcm)
@@ -3256,7 +3299,7 @@ func (e *Encoder) encodeSILKFrameBody(pcm []opusRes, lookahead []opusRes, frameS
 	if e.channels == 2 && internalChannels == 2 {
 		// Set bitrates: total rate on mid encoder (StereoLRToMSWithRates splits it),
 		// per-channel rate on side encoder for its own SNR control.
-		totalSilkRate := e.silkInputBitrate(frameSize)
+		totalSilkRate := silkInputRate
 		perChannelRate := totalSilkRate / int(e.channels)
 		if totalSilkRate > 0 {
 			e.silkEncoder.SetBitrate(totalSilkRate)
@@ -3403,7 +3446,7 @@ func (e *Encoder) encodeSILKFrameBody(pcm []opusRes, lookahead []opusRes, frameS
 	quantizeFloat32ToInt16LibopusInPlace(pcm32)
 	perChannelRate := 0
 	if e.bitrate > 0 {
-		perChannelRate = e.silkInputBitrate(frameSize) / internalChannels
+		perChannelRate = silkInputRate / internalChannels
 		if perChannelRate > 0 {
 			e.silkEncoder.SetBitrate(perChannelRate)
 		}
