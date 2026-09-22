@@ -314,7 +314,6 @@ func TestEncodeStatefulTransitionFuzz(t *testing.T) {
 		celtResiduals      int
 		framingResiduals   int
 		rangeOnlyResiduals int
-		skippedLBRR        int
 		transitionsSeen    int // total per-frame mode-class or bandwidth changes observed (libopus side)
 		dtxRunsSeen        int // frames where libopus emitted nothing (DTX no-output)
 		modeFlipsInStream  int // streams that crossed >1 distinct TOC mode class
@@ -322,18 +321,6 @@ func TestEncodeStatefulTransitionFuzz(t *testing.T) {
 
 	for idx := 0; idx < len(specs) && tested < budget; idx += stride {
 		spec := specs[idx]
-		// Pre-existing encoder finding (see encode_differential_fuzz_test.go header
-		// and decode_differential_fuzz_test.go): SILK LBRR (in-band FEC) with stereo
-		// and >=40 ms frames can produce a delta-gain index outside
-		// silk_delta_gain_iCDF, which panics gopus encode (libopus only
-		// silk_assert()s it, disabled in release). Owned by the silk fixed-point
-		// agent; skip here so the transition sweep does not crash on a known,
-		// unrelated encoder-side bug.
-		if spec.fec && spec.channels == 2 && spec.gmode == EncoderModeSILK &&
-			(spec.frameMs == ExpertFrameDuration40Ms || spec.frameMs == ExpertFrameDuration60Ms) {
-			skippedLBRR++
-			continue
-		}
 		tested++
 		t.Run(spec.name, func(t *testing.T) {
 			fs := encFrameSamples48k(spec.frameMs)
@@ -521,11 +508,11 @@ func TestEncodeStatefulTransitionFuzz(t *testing.T) {
 	}
 
 	t.Logf("encode stateful-transition sweep: %d/%d specs x %d frames "+
-		"(seg=%d frames, %d segments; skipped %d LBRR-panic specs); arch=%s; "+
+		"(seg=%d frames, %d segments); arch=%s; "+
 		"coverage[ libopus-side transitions=%d dtx-no-output-frames=%d multi-mode-streams=%d ]; "+
 		"TOC-mode-flips=%d cadence-mismatch=%d amd64-byte-fails=%d amd64-framing-fails=%d "+
 		"arm64-SILK-residuals=%d arm64-CELT/Hybrid-residuals=%d arm64-framing-residuals=%d arm64-range-tail-residuals=%d",
-		tested, len(specs), framesPerSpec, segFrames, len(encXfrSegmentPlan), skippedLBRR, runtime.GOARCH,
+		tested, len(specs), framesPerSpec, segFrames, len(encXfrSegmentPlan), runtime.GOARCH,
 		transitionsSeen, dtxRunsSeen, modeFlipsInStream,
 		tocFlips, cadenceMismatch, silkByteFails, framingFails,
 		silkResiduals, celtResiduals, framingResiduals, rangeOnlyResiduals)
@@ -626,12 +613,7 @@ func TestEncodeStatefulDTXRunFuzz(t *testing.T) {
 
 	for _, k := range kases {
 		for _, ch := range []int{1, 2} {
-			// Known LBRR stereo>=40 ms panic (owned by silk fixed-point agent); skip.
 			for _, fr := range frameDurs {
-				if k.fec && ch == 2 && k.gmode == EncoderModeSILK &&
-					(fr == ExpertFrameDuration40Ms || fr == ExpertFrameDuration60Ms) {
-					continue
-				}
 				for _, vbr := range vbrModes {
 					k, ch, fr, vbr := k, ch, fr, vbr
 					name := fmt.Sprintf("%s_ch%d_%dms_vbr%d_fec%t", k.name, ch, encMsOf(fr), vbr, k.fec)
