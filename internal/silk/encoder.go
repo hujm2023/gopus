@@ -802,6 +802,12 @@ func (e *Encoder) SetBitrate(bitrate int) {
 	e.targetRateBps = int32(bitrate)
 }
 
+// StereoAllocationTargetRate applies packet-level rate control before splitting
+// a shared stereo frame into mid and side channel targets.
+func (e *Encoder) StereoAllocationTargetRate(targetRateBps, frameLength, bitsUsedSoFar int) int {
+	return stereoAllocationTargetRate(e, targetRateBps, frameLength, bitsUsedSoFar)
+}
+
 // SetPreAdjustedTargetRateBps provides a one-shot frame target that already
 // includes packet-level reservoir/bits-balance adjustments. Shared stereo
 // packet control uses this to avoid applying the same packet correction once

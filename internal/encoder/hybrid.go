@@ -347,7 +347,6 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 
 	// Step 2: SILK encodes first (uses shared range encoder)
 	e.silkEncoder.SetRangeEncoder(re)
-	e.silkEncoder.ResetPacketState()
 	if silkBitrate > 0 {
 		perChannel := silkBitrate / e.silkInternalChannels()
 		if perChannel > 0 {
@@ -359,6 +358,7 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 	}
 	e.silkEncoder.SetFEC(e.lbrrCoded)
 	e.silkEncoder.SetPacketLoss(int(e.packetLoss))
+	e.silkEncoder.ResetPacketState()
 
 	// Per libopus: in hybrid CBR mode, SILK is switched to VBR with a max bits cap.
 	// This allows SILK to use fewer bits and CELT to absorb the variation.
@@ -483,7 +483,7 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 	// The CELT input is already delay-compensated by applyDelayCompensation
 	// in the caller (Fs/250 = 192 samples). No additional delay is needed here.
 	celtInput := e.applyHBGainFade(celtPCM, hbGain)
-	if e.channels == 2 {
+	if e.channels == 2 && len(e.celtEnergyMask) == 0 {
 		targetWidthQ14 := int16(16384)
 		if e.hybridState != nil {
 			targetWidthQ14 = min(max(e.hybridState.silkStereoWidthQ14, 0), 16384)
@@ -847,9 +847,41 @@ func (e *Encoder) computeHybridBitAllocationWithBudget(frameSize, maxDataBytes, 
 		silkBitrate -= 1000
 	}
 
+	silkBitrate = e.surroundSILKBitrate(silkBitrate, true)
 	celtBitrateHBGain = totalRate - silkBitrate
 	celtBitrate = int(e.bitrate) - silkBitrate
 	return silkBitrate, celtBitrate, celtBitrateHBGain
+}
+
+// surroundSILKBitrate applies opus_encoder.c's masking adjustment before
+// SILK rate control. Hybrid assigns three fifths of the adjustment to SILK.
+func (e *Encoder) surroundSILKBitrate(bitrate int, hybrid bool) int {
+	if len(e.celtEnergyMask) == 0 || e.bitrateMode == ModeCBR || e.lfe {
+		return bitrate
+	}
+	end, sampleRate := 17, 16000
+	switch e.effectiveBandwidth() {
+	case types.BandwidthNarrowband:
+		end, sampleRate = 13, 8000
+	case types.BandwidthMediumband:
+		end, sampleRate = 15, 12000
+	}
+	var sum float32
+	for ch := range int(e.channels) {
+		for i := range end {
+			mask := max(float32(-2), min(float32(.5), e.celtEnergyMask[ch*celt.MaxBands+i]))
+			if mask > 0 {
+				mask *= .5
+			}
+			sum += mask
+		}
+	}
+	depth := sum/float32(end)*float32(e.channels) + .2
+	offset := max(int(float32(sampleRate)*depth), -2*bitrate/3)
+	if hybrid {
+		offset = 3 * offset / 5
+	}
+	return bitrate + offset
 }
 
 // computeSilkRateForMax computes the SILK rate corresponding to a maximum available
@@ -910,6 +942,9 @@ func (e *Encoder) computeSilkRateForMax(maxBitrate int, frame20ms bool) int {
 // libopus float-path formula and exp2 approximation:
 // HB_gain = 1 - celt_exp2(-celt_rate/1024).
 func (e *Encoder) computeHBGain(celtBitrate int) opusVal16 {
+	if len(e.celtEnergyMask) > 0 {
+		return 1
+	}
 	expArg := -float32(celtBitrate) * (1.0 / 1024.0)
 	return 1.0 - opusVal16(celtExp2Approx(expArg))
 }
@@ -1300,10 +1335,12 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 		right[silkSamples+1] = lastR
 	}
 
+	// Apply packet rate control once, before splitting into channel targets.
+	targetRate := e.silkEncoder.StereoAllocationTargetRate(totalRateBps, silkSamples, 0)
 	// Convert to mid-side with libopus-aligned stereo front-end.
 	fsKHz := 16 // SILK wideband uses 16kHz
 	mid, side, predIdx, midOnly, midRate, sideRate, widthQ14 := e.silkEncoder.StereoLRToMSWithRates(
-		left, right, silkSamples, fsKHz, totalRateBps, e.lastVADActivityQ8, false,
+		left, right, silkSamples, fsKHz, targetRate, e.lastVADActivityQ8, false,
 	)
 	if e.hybridState != nil {
 		e.hybridState.silkStereoWidthQ14 = widthQ14
@@ -1311,9 +1348,11 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 	// Apply per-channel split from stereo front-end before encoding.
 	if midRate > 0 {
 		e.silkEncoder.SetBitrate(midRate)
+		e.silkEncoder.SetPreAdjustedTargetRateBps(midRate)
 	}
 	if e.silkSideEncoder != nil && sideRate > 0 {
 		e.silkSideEncoder.SetBitrate(sideRate)
+		e.silkSideEncoder.SetPreAdjustedTargetRateBps(sideRate)
 	}
 
 	// Compute VAD flags

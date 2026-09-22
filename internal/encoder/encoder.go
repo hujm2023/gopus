@@ -874,7 +874,7 @@ func (e *Encoder) silkInputBitrate(frameSize int) int {
 	// Keep the integer conversion order in opus_encoder.c: reserve TOC bits
 	// from the frame budget, then convert the remaining bits back to a rate.
 	bits := bitrateToBitsFs(int(e.bitrate), int(e.sampleRate), frameSize) - 8
-	return max(0, bitsToBitrateFs(bits, int(e.sampleRate), frameSize))
+	return e.surroundSILKBitrate(max(0, bitsToBitrateFs(bits, int(e.sampleRate), frameSize)), false)
 }
 
 // computeEquivRate calculates the equivalent bitrate based on frame rate, VBR mode,
@@ -1075,6 +1075,12 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 			cbrBytes = 1
 		}
 		cbrMaxDataBytes = cbrBytes
+		// Packet control uses the whole-byte CBR rate, as does libopus. Keep
+		// the user's configured rate for the next frame and public getters.
+		configuredBitrate := e.bitrate
+		e.bitrate = int32(effBitrate)
+		defer func() { e.bitrate = configuredBitrate }()
+		maxDataBytes = cbrMaxDataBytes
 	}
 	if e.dredEncodingActive() {
 		if plan, ok := e.computeDREDEmissionPlan(frameSize); ok {
