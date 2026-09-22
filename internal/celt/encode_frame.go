@@ -999,7 +999,7 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 			} else {
 				spread = spreadAggressive
 			}
-		} else if shortBlocks > 1 || e.complexity < 3 || effectiveBytes < 10*codedChannels {
+		} else if shortBlocks > 1 || e.complexity < 3 || targetBytes < 10*codedChannels {
 			if e.complexity == 0 {
 				spread = spreadNone
 			} else {
