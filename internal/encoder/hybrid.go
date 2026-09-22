@@ -112,7 +112,7 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 
 	incomingBandwidthSwitch := e.silkBWSwitch && allowTransitionRedundancy
 	if incomingBandwidthSwitch {
-		e.runPendingSilkTransitionPrefill(true, false)
+		e.runPendingSilkTransitionPrefill(true, false, e.hybridSILKPrefillBitrate(frameSize, maxPacketBytes, maxDataBytes, dredBitrate, allowTransitionRedundancy, transitionToCELT, true))
 	}
 	e.silkBWSwitch = false
 	// Ensure sub-encoders exist
@@ -151,57 +151,20 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 		e.celtEncoder.SetConstrainedVBR(false) // Always false in hybrid (libopus line 2455)
 	}
 
-	// Compute target buffer size based on bitrate mode.
-	// baseTargetBytes includes the TOC byte; payloadTarget is the shared range payload.
-	//
-	// Per libopus opus_encoder.c: max_data_bytes = IMIN(orig_max_data_bytes, 1276),
-	// and for non-SILK-only modes nb_compr_bytes = (max_data_bytes-1) - redundancy_bytes
-	// (line 2392) is the byte budget handed to the CELT sub-encoder. The CELT VBR
-	// reservoir (compute_vbr) then chooses the actual per-frame size from within that
-	// full budget. For unconstrained/constrained VBR the budget is therefore the caller
-	// buffer (clamped to 1276), NOT the nominal bitrate-derived size. SILK rate control
-	// stays nominal because compute_silk_rate_for_hybrid clamps bits_target to
-	// bitrate_to_bits() regardless of the larger byte budget (line 1960).
-	baseTargetBytes := e.targetBytesForBitrate(int(e.bitrate), frameSize)
-	// When DRED is carried, libopus reserves dred_bytes*3/4 out of nb_compr_bytes for
-	// the CELT part (opus_encoder.c lines 2399-2412) and lets the carried DRED payload
-	// absorb the remaining slack, so the primary CELT frame tracks the nominal
-	// bitrate-derived size rather than the full max_data_bytes budget. Keep the nominal
-	// base target and the CELT-internal reservoir (useFinalHybridVBRTarget gated below)
-	// for DRED-carrier frames, matching libopus' per-frame sizing.
+	baseTargetBytes, redundancyBytes := e.hybridFrameBudget(frameSize, maxPacketBytes, maxDataBytes, dredBitrate, allowTransitionRedundancy, transitionToCELT, incomingBandwidthSwitch)
 	dredCarrier := dredBitrate > 0
-	if e.bitrateMode != ModeCBR && maxPacketBytes == 0 && !dredCarrier {
-		// libopus max_data_bytes = IMIN(orig_max_data_bytes, 1276).
-		opusMaxDataBytes := maxDataBytes
-		if opusMaxDataBytes <= 0 {
-			opusMaxDataBytes = maxHybridPacketSize + 1
-		}
-		if opusMaxDataBytes > maxHybridPacketSize+1 {
-			opusMaxDataBytes = maxHybridPacketSize + 1
-		}
-		baseTargetBytes = opusMaxDataBytes
-	}
-	if maxPacketBytes > 0 {
-		baseTargetBytes = maxPacketBytes
-	}
-	if baseTargetBytes < 2 {
-		baseTargetBytes = 2
-	}
 	payloadTarget := max(baseTargetBytes-1, 1)
 
 	// Transition redundancy reserves bytes and adjusts SILK/CELT budgeting.
 	// CELT->Hybrid uses celt_to_silk=1; SILK/Hybrid->CELT uses celt_to_silk=0.
-	frameRate := int(e.sampleRate) / frameSize
 	prevPacketMode := e.prevPacketMode
 	transitionCeltToHybrid := allowTransitionRedundancy && !transitionToCELT && !e.lowDelay && ((isConcreteMode(prevPacketMode) && prevPacketMode == ModeCELT) || incomingBandwidthSwitch)
 	transitionSilkToCELT := allowTransitionRedundancy && transitionToCELT && !e.lowDelay
 	transitionRedundancy := transitionCeltToHybrid || transitionSilkToCELT
-	redundancyBytes := 0
 	var redundancyData []byte
 	var redundancyPCM []opusRes
 	var redundantRng uint32
 	if transitionRedundancy {
-		redundancyBytes = computeRedundancyBytes(baseTargetBytes, int(e.bitrate), frameRate, e.celtInternalChannelsForMode(ModeHybrid))
 		if transitionCeltToHybrid && redundancyBytes > 0 {
 			// Match libopus input shaping for CELT->Hybrid redundancy:
 			// redundancy CELT sees the same HB gain contour as the main CELT path.
@@ -753,6 +716,58 @@ func (e *Encoder) prepareCELTTransitionRedundancyInput(celtPCM []opusRes, hbGain
 	out := e.hybridState.scratchTransitionPCM[:redundancySamples]
 	copy(out, celtPCM[:redundancySamples])
 	return e.applyHBGainFade(out, hbGain)
+}
+
+// hybridFrameBudget normalizes the primary packet and transition redundancy
+// budgets for both SILK prefill and the actual Hybrid frame.
+func (e *Encoder) hybridFrameBudget(frameSize, maxPacketBytes, maxDataBytes, dredBitrate int, allowTransitionRedundancy, transitionToCELT, incomingBandwidthSwitch bool) (baseTargetBytes, redundancyBytes int) {
+	// Compute target buffer size based on bitrate mode.
+	// baseTargetBytes includes the TOC byte; payloadTarget is the shared range payload.
+	//
+	// Per libopus opus_encoder.c: max_data_bytes = IMIN(orig_max_data_bytes, 1276),
+	// and for non-SILK-only modes nb_compr_bytes = (max_data_bytes-1) - redundancy_bytes
+	// (line 2392) is the byte budget handed to the CELT sub-encoder. The CELT VBR
+	// reservoir (compute_vbr) then chooses the actual per-frame size from within that
+	// full budget. For unconstrained/constrained VBR the budget is therefore the caller
+	// buffer (clamped to 1276), NOT the nominal bitrate-derived size. SILK rate control
+	// stays nominal because compute_silk_rate_for_hybrid clamps bits_target to
+	// bitrate_to_bits() regardless of the larger byte budget (line 1960).
+	baseTargetBytes = e.targetBytesForBitrate(int(e.bitrate), frameSize)
+	// When DRED is carried, libopus reserves dred_bytes*3/4 out of nb_compr_bytes for
+	// the CELT part (opus_encoder.c lines 2399-2412) and lets the carried DRED payload
+	// absorb the remaining slack, so the primary CELT frame tracks the nominal
+	// bitrate-derived size rather than the full max_data_bytes budget. Keep the nominal
+	// base target and the CELT-internal reservoir (useFinalHybridVBRTarget gated below)
+	// for DRED-carrier frames, matching libopus' per-frame sizing.
+	dredCarrier := dredBitrate > 0
+	if e.bitrateMode != ModeCBR && maxPacketBytes == 0 && !dredCarrier {
+		// libopus max_data_bytes = IMIN(orig_max_data_bytes, 1276).
+		opusMaxDataBytes := maxDataBytes
+		if opusMaxDataBytes <= 0 {
+			opusMaxDataBytes = maxHybridPacketSize + 1
+		}
+		if opusMaxDataBytes > maxHybridPacketSize+1 {
+			opusMaxDataBytes = maxHybridPacketSize + 1
+		}
+		baseTargetBytes = opusMaxDataBytes
+	}
+	if maxPacketBytes > 0 {
+		baseTargetBytes = maxPacketBytes
+	}
+	if baseTargetBytes < 2 {
+		baseTargetBytes = 2
+	}
+
+	if allowTransitionRedundancy && !e.lowDelay && (transitionToCELT || e.prevPacketMode == ModeCELT || incomingBandwidthSwitch) {
+		redundancyBytes = computeRedundancyBytes(baseTargetBytes, int(e.bitrate), int(e.sampleRate)/frameSize, e.celtInternalChannelsForMode(ModeHybrid))
+	}
+	return baseTargetBytes, redundancyBytes
+}
+
+func (e *Encoder) hybridSILKPrefillBitrate(frameSize, maxPacketBytes, maxDataBytes, dredBitrate int, allowTransitionRedundancy, transitionToCELT, incomingBandwidthSwitch bool) int {
+	base, redundancy := e.hybridFrameBudget(frameSize, maxPacketBytes, maxDataBytes, dredBitrate, allowTransitionRedundancy, transitionToCELT, incomingBandwidthSwitch)
+	rate, _, _ := e.computeHybridBitAllocationWithBudget(frameSize, base, redundancy)
+	return rate
 }
 
 // computeHybridBitAllocation computes SILK/CELT bitrates using the default packet

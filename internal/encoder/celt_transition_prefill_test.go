@@ -3,6 +3,8 @@ package encoder
 import (
 	"math"
 	"testing"
+
+	"github.com/hujm2023/gopus/internal/testsignal"
 )
 
 func makeTransitionPCM(frameSize, channels int) []opusRes {
@@ -186,7 +188,7 @@ func TestSilkTransitionPrefillLongPacketKeepsFirstCELTSnapshot(t *testing.T) {
 		enc.delayBuffer[i] = opusRes(i + 1)
 	}
 
-	enc.maybePrefillSILKOnModeTransitionWithOptions(ModeHybrid, false, true)
+	enc.maybePrefillSILKOnModeTransitionWithOptions(ModeHybrid, false, true, enc.silkInputBitrate(480))
 
 	if !enc.hasCELTPrefill {
 		t.Fatal("expected first long-packet prefill to capture CELT transition history")
@@ -200,7 +202,7 @@ func TestSilkTransitionPrefillLongPacketKeepsFirstCELTSnapshot(t *testing.T) {
 		enc.delayBuffer[i] = opusRes(1000 + i)
 	}
 
-	enc.maybePrefillSILKOnModeTransitionWithOptions(ModeHybrid, true, false)
+	enc.maybePrefillSILKOnModeTransitionWithOptions(ModeHybrid, true, false, enc.silkInputBitrate(480))
 
 	if !enc.hasCELTPrefill {
 		t.Fatal("expected later long-packet prefill to keep prior CELT snapshot")
@@ -230,7 +232,7 @@ func TestSilkTransitionPrefillStereoPrimesMidAndSide(t *testing.T) {
 		enc.delayBuffer[2*i+1] = opusRes(right)
 	}
 
-	enc.maybePrefillSILKOnModeTransitionWithOptions(ModeHybrid, false, false)
+	enc.maybePrefillSILKOnModeTransitionWithOptions(ModeHybrid, false, false, enc.silkInputBitrate(480))
 
 	if enc.silkEncoder == nil {
 		t.Fatal("expected mid SILK encoder after stereo transition prefill")
@@ -268,5 +270,38 @@ func TestCELTTransitionPrefillUsesSavedHistory(t *testing.T) {
 	enc.celtEncoder.OverlapBufferInto(history)
 	if !hasNonZeroFloat32(history) {
 		t.Fatal("saved delay history was replaced by the silent current frame")
+	}
+}
+
+func TestHybridTransitionPrefillUsesAllocatedSILKRate(t *testing.T) {
+	pcm, err := testsignal.GenerateCorpusSignal(testsignal.CorpusMixedV1, 48000, 8*960, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	enc := NewEncoder(48000, 2)
+	enc.SetBitrate(24000)
+	enc.SetBitrateMode(ModeVBR)
+	enc.SetComplexity(10)
+	enc.SetForceChannels(2)
+	packet, err := enc.EncodeWithAnalysisMaxBytes(pcm[:960], 480, pcm[:960], 1276)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(packet) == 0 || packet[0]>>3 < 16 {
+		t.Fatalf("initial packet is not CELT: %x", packet)
+	}
+	rate := enc.hybridSILKPrefillBitrate(480, 0, 1276, 0, true, false, false)
+	// libopus's 24 kbps stereo Hybrid allocation is 19332 bps, giving
+	// 193 bits in the 10 ms prefill. Using all 232 Opus payload bits changes
+	// the stereo predictor/width state before the first coded SILK frame.
+	if rate != 19332 {
+		t.Fatalf("prefill SILK rate=%d, want 19332", rate)
+	}
+	enc.maybePrefillSILKOnModeTransition(ModeHybrid, rate)
+	if enc.hybridState == nil || enc.hybridState.silkStereoWidthQ14 != 0 {
+		t.Fatal("prefill did not collapse the quantized SILK width at its allocated rate")
+	}
+	if enc.silkEncoder.SmoothedStereoWidthQ14() != 16384 {
+		t.Fatalf("prefill smoothed width=%d, want 16384", enc.silkEncoder.SmoothedStereoWidthQ14())
 	}
 }

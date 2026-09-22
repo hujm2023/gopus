@@ -1237,7 +1237,7 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 	e.multiFrameLastSubframeDTX = false
 	switch actualMode {
 	case ModeSILK:
-		e.maybePrefillSILKOnModeTransition(actualMode)
+		e.maybePrefillSILKOnModeTransition(actualMode, e.silkInputBitrate(frameSize))
 		if frameSize > 3*f20 {
 			packet, err = e.encodeSILKMultiFramePacket(framePCM, vadPCM, frameSize, int(e.bitrate), int(encodingBitrate), dredBitrate, dredExtraDelay, maxDataBytes)
 		} else {
@@ -1278,8 +1278,6 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 			celtPCM := e.applyDelayCompensation(framePCM, frameSize)
 			packet, err = e.encodeHybridMultiFramePacket(framePCM, celtPCM, vadPCM, lookaheadSlice, delayState, frameSize, transitionToCELT, int(e.bitrate), int(encodingBitrate), dredBitrate, dredExtraDelay, maxDataBytes)
 		} else {
-			e.maybePrefillSILKOnModeTransition(actualMode)
-			celtPCM := e.applyDelayCompensation(framePCM, frameSize)
 			originalBitrate := e.bitrate
 			maxPacketBytes := 0
 			if encodingBitrate != originalBitrate {
@@ -1288,6 +1286,9 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 				}
 				e.bitrate = encodingBitrate
 			}
+			prefillRate := e.hybridSILKPrefillBitrate(frameSize, maxPacketBytes, maxDataBytes, dredBitrate, true, transitionToCELT, e.silkBWSwitch)
+			e.maybePrefillSILKOnModeTransition(actualMode, prefillRate)
+			celtPCM := e.applyDelayCompensation(framePCM, frameSize)
 			dredNoDecision := e.dredEncodingActive() && !e.lastOpusVADValid
 			frameData, err = e.encodeHybridFrameWithMaxPacketAndTransition(framePCM, celtPCM, lookaheadSlice, frameSize, maxPacketBytes, maxDataBytes, dredBitrate, false, true, transitionToCELT, false)
 			if encodingBitrate != originalBitrate {
@@ -2337,15 +2338,15 @@ func (e *Encoder) maybePrefillCELTOnModeTransition(actualMode Mode, celtPCM []op
 	e.celtForceIntra = true
 }
 
-func (e *Encoder) maybePrefillSILKOnModeTransition(actualMode Mode) {
-	e.maybePrefillSILKOnModeTransitionWithOptions(actualMode, true, true)
+func (e *Encoder) maybePrefillSILKOnModeTransition(actualMode Mode, silkBitrate int) {
+	e.maybePrefillSILKOnModeTransitionWithOptions(actualMode, true, true, silkBitrate)
 }
 
-func (e *Encoder) maybePrefillSILKOnModeTransitionWithOptions(actualMode Mode, preserveLP bool, captureCELTPrefill bool) {
+func (e *Encoder) maybePrefillSILKOnModeTransitionWithOptions(actualMode Mode, preserveLP bool, captureCELTPrefill bool, silkBitrate int) {
 	if !e.shouldPrefillSILKOnModeTransition(actualMode) {
 		return
 	}
-	e.runPendingSilkTransitionPrefill(preserveLP, captureCELTPrefill)
+	e.runPendingSilkTransitionPrefill(preserveLP, captureCELTPrefill, silkBitrate)
 }
 
 func (e *Encoder) shouldPrefillSILKOnModeTransition(actualMode Mode) bool {
@@ -2362,7 +2363,7 @@ func (e *Encoder) shouldPrefillSILKOnModeTransition(actualMode Mode) bool {
 	return true
 }
 
-func (e *Encoder) runPendingSilkTransitionPrefill(preserveLP bool, captureCELTPrefill bool) {
+func (e *Encoder) runPendingSilkTransitionPrefill(preserveLP bool, captureCELTPrefill bool, silkBitrate int) {
 	channels := int(e.channels)
 	sampleRate := int(e.sampleRate)
 	// libopus prefill uses 10 ms of delay-buffer history on CELT->SILK/HYBRID.
@@ -2383,10 +2384,10 @@ func (e *Encoder) runPendingSilkTransitionPrefill(preserveLP bool, captureCELTPr
 	} else if len(e.delayBuffer) > 0 {
 		copy(prefill[prefillSamples-len(e.delayBuffer):], e.delayBuffer)
 	}
-	e.runSilkTransitionPrefill(prefill, preserveLP, captureCELTPrefill)
+	e.runSilkTransitionPrefill(prefill, preserveLP, captureCELTPrefill, silkBitrate)
 }
 
-func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, captureCELTPrefill bool) {
+func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, captureCELTPrefill bool, silkBitrate int) {
 	if len(prefill) == 0 || e.channels < 1 || e.sampleRate <= 0 {
 		return
 	}
@@ -2478,7 +2479,7 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 	}
 
 	if e.channels != 1 {
-		e.runSilkStereoTransitionPrefill(prefill, prefillFrameSize, targetRate)
+		e.runSilkStereoTransitionPrefill(prefill, prefillFrameSize, targetRate, silkBitrate)
 		return
 	}
 
@@ -2520,7 +2521,7 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 	e.silkEncoder.PrefillFrame(silkIn)
 }
 
-func (e *Encoder) runSilkStereoTransitionPrefill(prefill []opusRes, prefillFrameSize, targetRate int) {
+func (e *Encoder) runSilkStereoTransitionPrefill(prefill []opusRes, prefillFrameSize, targetRate, silkBitrate int) {
 	if e.silkEncoder == nil || e.silkSideEncoder == nil || prefillFrameSize <= 0 || targetRate <= 0 {
 		return
 	}
@@ -2575,13 +2576,9 @@ func (e *Encoder) runSilkStereoTransitionPrefill(prefill []opusRes, prefillFrame
 		return
 	}
 
-	totalRate := e.silkInputBitrate(prefillFrameSize)
-	if totalRate <= 0 {
-		totalRate = int(e.bitrate)
-	}
-	if totalRate <= 0 {
-		totalRate = 20000
-	}
+	// Prefill is always 10 ms, but its target is the actual packet's SILK
+	// allocation, not the bitrate of the complete Opus stream.
+	totalRate := e.silkEncoder.StereoAllocationTargetRate(silkBitrate, len(left), 0)
 	fsKHz := targetRate / 1000
 	if fsKHz <= 0 {
 		fsKHz = 16
@@ -3133,7 +3130,7 @@ func (e *Encoder) encodeSILKFrameWithDRED(pcm []opusRes, lookahead []opusRes, fr
 func (e *Encoder) encodeSILKFrameWithDREDAndMax(pcm []opusRes, lookahead []opusRes, frameSize, originalBitrate, dredBitrate, maxPacketBytes int) ([]byte, error) {
 	incomingSwitch := e.silkBWSwitch
 	if incomingSwitch {
-		e.runPendingSilkTransitionPrefill(true, false)
+		e.runPendingSilkTransitionPrefill(true, false, e.silkInputBitrate(frameSize))
 	}
 	e.ensureSILKEncoder()
 	e.silkBWSwitch = false
@@ -3867,14 +3864,6 @@ func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes,
 			e.processDREDLatentsWithActivity(subPCM, dredExtraDelay, e.lastOpusVADActive)
 		}
 
-		if packetPrefillFromCELT {
-			// libopus keeps the packet-level CELT->SILK/HYBRID prefill active for
-			// each 20 ms internal frame of long packets. The first subframe also
-			// snapshots CELT's transition-prefill window; later ones only re-prime
-			// the SILK state from the rolling delay history.
-			e.maybePrefillSILKOnModeTransitionWithOptions(ModeHybrid, i > 0, i == 0)
-		}
-
 		// Hybrid subframes in multi-frame packets should be encoded exactly like
 		// independent 20ms frames. Do not leak future subframe samples as lookahead.
 		subLookahead := lookahead
@@ -3907,6 +3896,15 @@ func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes,
 		prevPacketMode := e.prevPacketMode
 		runCELTTransitionPrefill := i == 0 && !e.lowDelay && isConcreteMode(prevPacketMode) && prevPacketMode != ModeHybrid
 		subframeToCELT := transitionToCELT && i == frameCount-1
+		if packetPrefillFromCELT {
+			// libopus keeps the packet-level CELT->SILK/HYBRID prefill active for
+			// each 20 ms internal frame of long packets. The first subframe also
+			// snapshots CELT's transition-prefill window; later ones only re-prime
+			// the SILK state from the rolling delay history.
+			prefillRate := e.hybridSILKPrefillBitrate(f20, currMax, 0, dredBitrate, allowTransitionRedundancy, subframeToCELT, e.silkBWSwitch)
+			e.maybePrefillSILKOnModeTransitionWithOptions(ModeHybrid, i > 0, i == 0, prefillRate)
+		}
+
 		frameData, err := e.encodeHybridFrameWithMaxPacketAndTransition(subPCM, subCELTPCM, subLookahead, f20, currMax, 0, dredBitrate, true, allowTransitionRedundancy, subframeToCELT, runCELTTransitionPrefill)
 		if err != nil {
 			e.bitrate = savedBitrate
