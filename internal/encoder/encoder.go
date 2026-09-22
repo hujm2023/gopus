@@ -47,6 +47,7 @@ import (
 	"github.com/hujm2023/gopus/internal/dnnblob"
 	"github.com/hujm2023/gopus/internal/extsupport"
 	"github.com/hujm2023/gopus/internal/opusmath"
+	"github.com/hujm2023/gopus/internal/rangecoding"
 	"github.com/hujm2023/gopus/internal/silk"
 	"github.com/hujm2023/gopus/types"
 )
@@ -271,15 +272,23 @@ type Encoder struct {
 	// matching libopus silk_setup_resamplers(forEnc=1). At 48 kHz API it
 	// downsamples (identical to the legacy down_FIR path); at native sub-48 kHz
 	// rates it copies / up2 / IIR-FIR / down as the ratio requires.
-	silkResampler       *silk.LibopusResampler
-	silkResamplerRight  *silk.LibopusResampler
-	silkResamplerRate   int32
-	silkMaxInternalRate int
-	silkResampled       []float32
-	silkResampledR      []float32
-	silkResampledBuffer []float32
-	silkMonoInputHist   [2]float32
-	scratchSilkAligned  []float32
+	silkResampler         *silk.LibopusResampler
+	silkResamplerRight    *silk.LibopusResampler
+	silkResamplerRate     int32
+	silkMaxInternalRate   int
+	silkInternalRate      int
+	silkSwitchReady       bool
+	silkNonfinalFrame     bool
+	silkOpusCanSwitch     bool
+	silkBWSwitch          bool
+	silkRedundantRange    uint32
+	silkRedundancyBytes   int
+	silkRedundancyReserve int
+	silkResampled         []float32
+	silkResampledR        []float32
+	silkResampledBuffer   []float32
+	silkMonoInputHist     [2]float32
+	scratchSilkAligned    []float32
 
 	// scratchF32 backs the four max-size preallocated float32 work buffers
 	// (scratchPCM32/Left/Right/Mono) with one contiguous allocation; see NewEncoder.
@@ -577,6 +586,14 @@ func (e *Encoder) Reset() {
 	}
 	e.silkMonoInputHist = [2]float32{}
 	e.silkMaxInternalRate = 0
+	e.silkInternalRate = 0
+	e.silkSwitchReady = false
+	e.silkNonfinalFrame = false
+	e.silkOpusCanSwitch = false
+	e.silkBWSwitch = false
+	e.silkRedundantRange = 0
+	e.silkRedundancyBytes = 0
+	e.silkRedundancyReserve = 0
 	e.resetFECState()
 	if e.dtx != nil {
 		e.dtx.reset()
@@ -711,7 +728,7 @@ func (e *Encoder) currentFinalRange(mode Mode) uint32 {
 	switch mode {
 	case ModeSILK:
 		if e.silkEncoder != nil {
-			return e.silkEncoder.FinalRange()
+			return e.silkEncoder.FinalRange() ^ e.silkRedundantRange
 		}
 	case ModeHybrid, ModeCELT:
 		if mode == ModeHybrid {
@@ -1139,6 +1156,7 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 		}
 	}
 
+	e.controlSILKBandwidth(actualMode)
 	dredExtraDelay := 0
 	if !e.lowDelay {
 		dredExtraDelay = sampleRate / 250
@@ -1215,7 +1233,7 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 	case ModeSILK:
 		e.maybePrefillSILKOnModeTransition(actualMode)
 		if frameSize > 3*f20 {
-			packet, err = e.encodeSILKMultiFramePacket(framePCM, vadPCM, frameSize, int(e.bitrate), int(encodingBitrate), dredBitrate, dredExtraDelay)
+			packet, err = e.encodeSILKMultiFramePacket(framePCM, vadPCM, frameSize, int(e.bitrate), int(encodingBitrate), dredBitrate, dredExtraDelay, maxDataBytes)
 		} else {
 			originalBitrate := e.bitrate
 			if encodingBitrate != originalBitrate {
@@ -1237,7 +1255,7 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 					frameData = frameData[:1]
 					frameData[0] = 0
 					silkBusted = true
-				} else {
+				} else if e.silkRedundancyBytes == 0 {
 					frameData = trimSilkTrailingZeros(frameData)
 				}
 				if dredNoDecision {
@@ -1252,7 +1270,7 @@ func (e *Encoder) encodeOpusResWithAnalysisMaxBytes(inputPCM []opusRes, frameSiz
 			delayState := e.ensureDelayState(len(e.delayBuffer))
 			copy(delayState, e.delayBuffer)
 			celtPCM := e.applyDelayCompensation(framePCM, frameSize)
-			packet, err = e.encodeHybridMultiFramePacket(framePCM, celtPCM, vadPCM, lookaheadSlice, delayState, frameSize, transitionToCELT, int(e.bitrate), int(encodingBitrate), dredBitrate, dredExtraDelay)
+			packet, err = e.encodeHybridMultiFramePacket(framePCM, celtPCM, vadPCM, lookaheadSlice, delayState, frameSize, transitionToCELT, int(e.bitrate), int(encodingBitrate), dredBitrate, dredExtraDelay, maxDataBytes)
 		} else {
 			e.maybePrefillSILKOnModeTransition(actualMode)
 			celtPCM := e.applyDelayCompensation(framePCM, frameSize)
@@ -2399,7 +2417,11 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 	if preserveLP {
 		savedMainLP = e.silkEncoder.GetLPState()
 	}
-	e.silkEncoder.Reset()
+	if preserveLP {
+		e.silkEncoder.ResetForBandwidthPrefill()
+	} else {
+		e.silkEncoder.Reset()
+	}
 	e.silkEncoder.ResetTransitionPrefillState()
 	if preserveLP {
 		// Match libopus prefillFlag==2 semantics: keep LP transition state while
@@ -2414,7 +2436,11 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 		if preserveLP {
 			savedSideLP = e.silkSideEncoder.GetLPState()
 		}
-		e.silkSideEncoder.Reset()
+		if preserveLP {
+			e.silkSideEncoder.ResetForBandwidthPrefill()
+		} else {
+			e.silkSideEncoder.Reset()
+		}
 		e.silkSideEncoder.ResetTransitionPrefillState()
 		if preserveLP {
 			e.silkSideEncoder.SetLPState(savedSideLP)
@@ -3100,6 +3126,70 @@ func (e *Encoder) encodeSILKFrameWithDRED(pcm []opusRes, lookahead []opusRes, fr
 // difference. maxPacketBytes, when >0, caps the SILK payload (used by the
 // multi-frame and low-space paths). It returns the raw SILK frame bytes.
 func (e *Encoder) encodeSILKFrameWithDREDAndMax(pcm []opusRes, lookahead []opusRes, frameSize, originalBitrate, dredBitrate, maxPacketBytes int) ([]byte, error) {
+	incomingSwitch := e.silkBWSwitch
+	if incomingSwitch {
+		e.runPendingSilkTransitionPrefill(true, false)
+	}
+	e.ensureSILKEncoder()
+	e.silkBWSwitch = false
+	e.silkRedundancyBytes = 0
+	maxBytes := maxPacketBytes
+	if maxBytes <= 0 {
+		maxBytes = libopusMaxDataBytesCap
+	}
+	if e.bitrateMode == ModeCBR {
+		maxBytes = min(maxBytes, e.targetBytesForBitrate(int(e.bitrate), frameSize))
+	}
+	needsRedundancy := !e.restrictedSilkApp && (incomingSwitch || (e.silkSwitchReady && !e.silkNonfinalFrame))
+	if !needsRedundancy {
+		data, err := e.encodeSILKFrameBody(pcm, lookahead, frameSize, originalBitrate, dredBitrate, maxPacketBytes)
+		e.silkOpusCanSwitch = e.silkSwitchReady && !e.silkNonfinalFrame
+		return data, err
+	}
+	var redundancy []byte
+	var redundancyErr error
+	if needsRedundancy {
+		bytes := computeRedundancyBytes(maxBytes, int(e.bitrate), int(e.sampleRate)/frameSize, e.silkInternalChannels())
+		if incomingSwitch {
+			e.silkRedundancyReserve = bytes*8 + 1
+		}
+		celtPCM := e.applyDelayCompensation(pcm, frameSize)
+		if e.hybridState == nil {
+			e.hybridState = &HybridState{prevHBGain: 1, stereoWidthQ14: 16384, silkStereoWidthQ14: 16384}
+		}
+		celtPCM = e.applyCELTStereoWidthFade(celtPCM, frameSize)
+		e.silkEncoder.SetPacketTermination(func(re *rangecoding.Encoder) {
+			if bytes < 2 || re.Tell()+17 > (maxBytes-1)*8 {
+				return
+			}
+			if incomingSwitch {
+				re.EncodeBit(1, 1)
+			} else {
+				re.EncodeBit(0, 1)
+			}
+			bytes = min(257, max(2, min(bytes, maxBytes-1-(re.Tell()+7)/8)))
+			if incomingSwitch {
+				redundancy, e.silkRedundantRange, redundancyErr = e.encodeCELTTransitionRedundancy(celtPCM, frameSize, bytes)
+			} else {
+				redundancy, e.silkRedundantRange, redundancyErr = e.encodeCELTSilkToCELTRedundancy(celtPCM, frameSize, bytes)
+			}
+			e.silkBWSwitch = e.silkSwitchReady && !e.silkNonfinalFrame && len(redundancy) >= 2
+		})
+	}
+	defer func() { e.silkEncoder.SetPacketTermination(nil); e.silkRedundancyReserve = 0 }()
+	data, err := e.encodeSILKFrameBody(pcm, lookahead, frameSize, originalBitrate, dredBitrate, maxPacketBytes)
+	e.silkOpusCanSwitch = e.silkSwitchReady && !e.silkNonfinalFrame
+	if err != nil {
+		return nil, err
+	}
+	if redundancyErr != nil {
+		return nil, redundancyErr
+	}
+	e.silkRedundancyBytes = len(redundancy)
+	return append(data, redundancy...), nil
+}
+
+func (e *Encoder) encodeSILKFrameBody(pcm []opusRes, lookahead []opusRes, frameSize, originalBitrate, dredBitrate, maxPacketBytes int) ([]byte, error) {
 	e.ensureSILKEncoder()
 	pcm32 := e.scratchPCM32[:len(pcm)]
 	copy(pcm32, pcm)
@@ -3162,8 +3252,8 @@ func (e *Encoder) encodeSILKFrameWithDREDAndMax(pcm []opusRes, lookahead []opusR
 			if maxPacketBytes > 0 {
 				maxBits = e.silkMaxBitsForPacketBytes(frameSize, totalSilkRate, maxPacketBytes, dredBitrate)
 			}
-			e.silkEncoder.SetMaxBits(maxBits)
-			e.silkSideEncoder.SetMaxBits(maxBits)
+			e.silkEncoder.SetMaxBits(e.silkBandwidthMaxBits(maxBits, frameSize))
+			e.silkSideEncoder.SetMaxBits(e.silkBandwidthMaxBits(maxBits, frameSize))
 		}
 
 		left := e.scratchLeft[:frameSize]
@@ -3288,7 +3378,7 @@ func (e *Encoder) encodeSILKFrameWithDREDAndMax(pcm []opusRes, lookahead []opusR
 		if maxPacketBytes > 0 {
 			maxBits = e.silkMaxBitsForPacketBytes(frameSize, perChannelRate, maxPacketBytes, dredBitrate)
 		}
-		e.silkEncoder.SetMaxBits(maxBits)
+		e.silkEncoder.SetMaxBits(e.silkBandwidthMaxBits(maxBits, frameSize))
 	}
 	e.silkEncoder.SetFEC(e.lbrrCoded)
 	e.silkEncoder.SetPacketLoss(int(e.packetLoss))
@@ -3692,7 +3782,7 @@ func (e *Encoder) encodeCELTMultiFramePacket(framePCM []opusRes, vadPCM []opusRe
 
 // encodeHybridMultiFramePacket encodes long hybrid packets by splitting into
 // 20ms hybrid frames and packing them with Opus multi-frame framing.
-func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes, vadPCM []opusRes, lookahead []opusRes, delayState []opusRes, frameSize int, transitionToCELT bool, originalBitrate, encodingBitrate, dredBitrate, dredExtraDelay int) ([]byte, error) {
+func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes, vadPCM []opusRes, lookahead []opusRes, delayState []opusRes, frameSize int, transitionToCELT bool, originalBitrate, encodingBitrate, dredBitrate, dredExtraDelay, outDataBytes int) ([]byte, error) {
 	f20 := e.frame20ms()
 	if frameSize <= f20 || frameSize%f20 != 0 {
 		return nil, ErrInvalidFrameSize
@@ -3723,7 +3813,11 @@ func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes,
 	frames := e.scratchFrameSlots[:frameCount]
 	sameSize := true
 	prevSize := -1
-	packetTargetBytes := max(e.targetBytesForBitrate(originalBitrate, frameSize), 1)
+	// VBR uses the caller's output budget; only CBR is capped to the target.
+	packetTargetBytes := max(outDataBytes, 1)
+	if e.bitrateMode == ModeCBR {
+		packetTargetBytes = max(min(e.targetBytesForBitrate(originalBitrate, frameSize), outDataBytes), 1)
+	}
 	maxHeaderBytes := 3
 	if frameCount > 2 {
 		maxHeaderBytes = 2 + (frameCount-1)*2
@@ -3747,7 +3841,12 @@ func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes,
 	}
 	savedBitrate := e.bitrate
 	e.bitrate = int32(subframeBitrate)
+	defer func() { e.silkNonfinalFrame = false }()
 	for i := range frameCount {
+		e.silkNonfinalFrame = i != frameCount-1
+		if i > 0 {
+			e.controlSILKBandwidth(ModeHybrid)
+		}
 		e.primeSubframeAnalysis(f20)
 		start := i * frameStride
 		end := start + frameStride
@@ -3862,7 +3961,7 @@ func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, celtPCM []opusRes,
 
 // encodeSILKMultiFramePacket encodes 80/100/120ms SILK packets by splitting
 // them into libopus-compatible 20/40/60ms SILK frames and repacketizing them.
-func (e *Encoder) encodeSILKMultiFramePacket(pcm []opusRes, vadPCM []opusRes, frameSize int, originalBitrate, encodingBitrate, dredBitrate, dredExtraDelay int) ([]byte, error) {
+func (e *Encoder) encodeSILKMultiFramePacket(pcm []opusRes, vadPCM []opusRes, frameSize int, originalBitrate, encodingBitrate, dredBitrate, dredExtraDelay, outDataBytes int) ([]byte, error) {
 	channels := int(e.channels)
 	if len(pcm) != frameSize*channels || len(vadPCM) != frameSize*channels {
 		return nil, ErrInvalidFrameSize
@@ -3904,7 +4003,11 @@ func (e *Encoder) encodeSILKMultiFramePacket(pcm []opusRes, vadPCM []opusRes, fr
 	if encodingBitrate > 0 {
 		subframeBitrate = encodingBitrate
 	}
-	packetTargetBytes := max(e.targetBytesForBitrate(originalBitrate, frameSize), 1)
+	// VBR uses the caller's output budget; only CBR is capped to the target.
+	packetTargetBytes := max(outDataBytes, 1)
+	if e.bitrateMode == ModeCBR {
+		packetTargetBytes = max(min(e.targetBytesForBitrate(originalBitrate, frameSize), outDataBytes), 1)
+	}
 	maxHeaderBytes := 3
 	if frameCount > 2 {
 		maxHeaderBytes = 2 + (frameCount-1)*2
@@ -3924,7 +4027,12 @@ func (e *Encoder) encodeSILKMultiFramePacket(pcm []opusRes, vadPCM []opusRes, fr
 	savedBitrate := e.bitrate
 	e.bitrate = int32(subframeBitrate)
 
+	defer func() { e.silkNonfinalFrame = false }()
 	for i := range frameCount {
+		e.silkNonfinalFrame = i != frameCount-1
+		if i > 0 {
+			e.controlSILKBandwidth(ModeSILK)
+		}
 		e.primeSubframeAnalysis(encFrameSize)
 		start := i * frameStride
 		end := start + frameStride
@@ -4020,12 +4128,16 @@ func (e *Encoder) ensureSILKEncoder() {
 		e.silkEncoder.SetReducedDependency(e.predictionDisabled)
 		return
 	}
-	e.silkEncoder = silk.NewEncoder(bw)
+	if e.silkEncoder == nil {
+		e.silkEncoder = silk.NewEncoder(bw)
+	} else {
+		e.silkResampler = e.silkEncoder.ReconfigureBandwidth(bw, int(e.sampleRate))
+		e.silkResamplerRate = int32(silk.GetBandwidthConfig(bw).SampleRate)
+	}
 	e.silkEncoder.SetComplexity(int(e.complexity))
 	e.silkEncoder.SetReducedDependency(e.predictionDisabled)
-	// Mono SILK handoff state tracks the two-sample sMid history across frames.
-	// Reset whenever the SILK core bandwidth/sample-rate changes.
-	e.silkMonoInputHist = [2]float32{}
+	// sStereo.sMid belongs to the SILK packet encoder, so a sampling-rate
+	// switch must retain its two-sample history.
 }
 
 // ensureSILKSideEncoder creates the SILK side channel encoder for stereo hybrid mode.
@@ -4038,7 +4150,11 @@ func (e *Encoder) ensureSILKSideEncoder() {
 		e.silkSideEncoder.SetReducedDependency(e.predictionDisabled)
 		return
 	}
-	e.silkSideEncoder = silk.NewEncoder(bw)
+	if e.silkSideEncoder == nil {
+		e.silkSideEncoder = silk.NewEncoder(bw)
+	} else {
+		e.silkResamplerRight = e.silkSideEncoder.ReconfigureBandwidth(bw, int(e.sampleRate))
+	}
 	e.silkSideEncoder.SetComplexity(int(e.complexity))
 	e.silkSideEncoder.SetReducedDependency(e.predictionDisabled)
 }
@@ -4436,6 +4552,18 @@ func (e *Encoder) ensureCELTEncoder() {
 
 // silkBandwidth converts the Opus bandwidth to SILK bandwidth.
 func (e *Encoder) silkBandwidth() silk.Bandwidth {
+	switch e.silkInternalRate {
+	case 8000:
+		return silk.BandwidthNarrowband
+	case 12000:
+		return silk.BandwidthMediumband
+	case 16000:
+		return silk.BandwidthWideband
+	}
+	return e.requestedSILKBandwidth()
+}
+
+func (e *Encoder) requestedSILKBandwidth() silk.Bandwidth {
 	bandwidth := e.effectiveBandwidth()
 	if e.silkMaxInternalRate == 8000 {
 		bandwidth = types.BandwidthNarrowband
@@ -4691,4 +4819,47 @@ func (e *Encoder) syncCELTEnergyMask() {
 	}
 	n := min(len(e.celtEnergyMask), celt.MaxBands*2)
 	e.celtEncoder.SetEnergyMask(e.celtEnergyMask[:n])
+}
+
+// controlSILKBandwidth keeps requested Opus bandwidth separate from the actual
+// SILK sampling rate, which can change only at the bandwidth-switch handshake.
+func (e *Encoder) controlSILKBandwidth(mode Mode) {
+	e.silkSwitchReady = false
+	e.silkRedundantRange = 0
+	e.silkRedundancyBytes = 0
+	e.silkRedundancyReserve = 0
+	if mode == ModeCELT {
+		e.silkBWSwitch = false
+		return
+	}
+	minimum := 8000
+	if mode == ModeHybrid {
+		minimum = 16000
+	}
+	desired := silk.GetBandwidthConfig(e.requestedSILKBandwidth()).SampleRate
+	current := 0
+	var lp silk.LPState
+	allow := false
+	if e.silkEncoder != nil && !e.first && e.prevMode != ModeCELT {
+		current = e.silkEncoder.SampleRate()
+		lp = e.silkEncoder.GetLPState()
+		allow = e.silkEncoder.AllowBandwidthSwitch()
+	}
+	e.silkInternalRate, e.silkSwitchReady = lp.ControlBandwidth(current, desired, minimum,
+		e.silkMaxInternalRate, int(e.sampleRate), allow, e.silkOpusCanSwitch)
+	if e.silkEncoder != nil {
+		e.silkEncoder.SetLPState(lp)
+	}
+	if e.silkSideEncoder != nil {
+		e.silkSideEncoder.SetLPState(lp)
+	}
+}
+
+func (e *Encoder) silkBandwidthMaxBits(bits, frameSize int) int {
+	bits = max(bits-e.silkRedundancyReserve, 0)
+	if e.silkSwitchReady {
+		payloadMS := frameSize * 1000 / int(e.sampleRate)
+		bits -= bits * 5 / (payloadMS + 5)
+	}
+	return bits
 }

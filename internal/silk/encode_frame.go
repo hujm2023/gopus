@@ -32,6 +32,7 @@ func (e *Encoder) EncodeFrame(pcm []float32, lookahead []float32, vadFlag bool) 
 	}
 	frameSamples := min(numSubframes*subframeSamples, len(pcm))
 	payloadSizeMs := (frameSamples * 1000) / config.SampleRate
+	e.controlFrameMS = payloadSizeMs
 	packetPayloadSizeMs := payloadSizeMs
 	if e.nFramesPerPacket > 1 {
 		packetPayloadSizeMs = payloadSizeMs * int(e.nFramesPerPacket)
@@ -802,8 +803,8 @@ func (e *Encoder) finalizeEncodeFrame(frameSamples, payloadSizeMs int, vadFlag, 
 	// estimate for the reservoir, NOT the flushed length.
 	nBytesOut := max((e.rangeEncoder.Tell()+7)>>3, 0)
 
-	raw := e.rangeEncoder.Done()
-	resultLen := min(nBytesOut, len(raw))
+	raw := e.finalizePacketRange(e.rangeEncoder)
+	resultLen := len(raw)
 
 	// Match libopus: return exactly ec_tell() byte count for the frame.
 	result := raw[:resultLen]
@@ -1131,8 +1132,8 @@ func (e *Encoder) EncodePacketWithFECWithVADStates(pcm []float32, lookahead []fl
 	// As in the single-frame path, this pre-flush (ec_tell+7)>>3 estimate is what
 	// libopus feeds into the reservoir; it can exceed the flushed buffer length.
 	nBytesOut := max((e.rangeEncoder.Tell()+7)>>3, 0)
-	raw := e.rangeEncoder.Done()
-	resultLen := min(nBytesOut, len(raw))
+	raw := e.finalizePacketRange(e.rangeEncoder)
+	resultLen := len(raw)
 	result := raw[:resultLen]
 	if e.targetRateBps > 0 {
 		payloadSizeMs := (nFrames * frameSamples * 1000) / config.SampleRate

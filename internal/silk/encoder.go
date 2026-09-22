@@ -28,7 +28,9 @@ type Encoder struct {
 	silkEncoderFixedFields
 
 	// Range encoder reference (set per frame)
-	rangeEncoder *rangecoding.Encoder
+	rangeEncoder      *rangecoding.Encoder
+	packetTermination func(*rangecoding.Encoder)
+	controlFrameMS    int
 
 	// lastRng holds the final range coder state after encoding.
 	// This is captured before calling Done() which clears the state.
@@ -402,6 +404,7 @@ func NewEncoder(bandwidth Bandwidth) *Encoder {
 
 // Reset clears encoder state for a new stream.
 func (e *Encoder) Reset() {
+	e.packetTermination = nil
 	e.resetFixedState()
 	e.haveEncoded = false
 	e.previousLogGain = 0
@@ -938,4 +941,61 @@ func (e *Encoder) finishLBRRPacket() {
 // LBRR may be disabled even when FEC is enabled if bitrate is too low.
 func (e *Encoder) LBRREnabled() bool {
 	return e.lbrrEnabled
+}
+
+// SetPacketTermination sets the Opus packet-tail writer. SILK invokes it after
+// capturing its own byte count and before finalizing an owned range encoder;
+// externally shared range encoders remain the caller's responsibility.
+func (e *Encoder) SetPacketTermination(write func(*rangecoding.Encoder)) {
+	e.packetTermination = write
+}
+
+func (e *Encoder) finalizePacketRange(re *rangecoding.Encoder) []byte {
+	if e.packetTermination != nil {
+		e.packetTermination(re)
+	}
+	e.lastRng = re.Range()
+	n := max((re.Tell()+7)>>3, 0)
+	raw := re.Done()
+	return raw[:min(n, len(raw))]
+}
+
+// ReconfigureBandwidth mirrors control_codec.c: resample x_buf via the API
+// rate, reset rate-dependent predictor state, and retain packet/VAD history.
+// The returned input resampler has already consumed the converted history.
+func (e *Encoder) ReconfigureBandwidth(bw Bandwidth, apiRate int) *LibopusResampler {
+	cfg := GetBandwidthConfig(bw)
+	bufferMS := 2*max(e.controlFrameMS, 10) + laShapeMs
+	oldCount := min(bufferMS*int(e.sampleRate)/1000, len(e.inputBuffer))
+	old := make([]float32, oldCount)
+	for i := range old {
+		old[i] = float32(floatToInt16Round(e.inputBuffer[i]*silkSampleScale)) / silkSampleScale
+	}
+	api := make([]float32, bufferMS*apiRate/1000)
+	NewLibopusResampler(int(e.sampleRate), apiRate).ProcessInto(old, api)
+	resampler := NewLibopusResamplerEnc(apiRate, cfg.SampleRate)
+	converted := make([]float32, bufferMS*cfg.SampleRate/1000)
+	resampler.ProcessInto(api, converted)
+	e.inputBuffer = make([]float32, (ltpMemLengthMs+laShapeMs+20)*cfg.SampleRate/1000)
+	copy(e.inputBuffer, converted)
+	e.bandwidth, e.sampleRate, e.lpcOrder = bw, int32(cfg.SampleRate), int32(cfg.LPCOrder)
+	e.prevLSFQ15 = make([]int16, cfg.LPCOrder)
+	e.lpcState = make([]float32, cfg.LPCOrder)
+	e.pitchAnalysisBuf = make([]float32, (ltpMemLengthMs+20)*cfg.SampleRate/1000)
+	e.scratchPitchRes32 = nil
+	e.nFramesEncoded = 0
+	e.lastControlTargetRateBps = 0
+	e.ResetStereoSideAfterMidOnly()
+	e.SetComplexity(int(e.complexity))
+	return resampler
+}
+
+// ResetForBandwidthPrefill resets per-channel state, retaining packet-level
+// stereo history across the prefillFlag==2 channel reinitialization.
+func (e *Encoder) ResetForBandwidthPrefill() {
+	stereo := e.stereo
+	timeSince, allow := e.timeSinceSwitchAllowedMS, e.allowBandwidthSwitch
+	e.Reset()
+	e.stereo = stereo
+	e.timeSinceSwitchAllowedMS, e.allowBandwidthSwitch = timeSince, allow
 }

@@ -23,7 +23,7 @@ func generateSinePCM(frameSize, channels int, frequency float64) []float64 {
 	return pcm
 }
 
-func TestSILKEncoderReconfiguresOnBandwidthChangeMono(t *testing.T) {
+func TestSILKEncoderDefersBandwidthChangeDuringSpeechMono(t *testing.T) {
 	enc := NewEncoder(48000, 1)
 	enc.SetMode(ModeSILK)
 	enc.SetBitrate(32000)
@@ -52,6 +52,9 @@ func TestSILKEncoderReconfiguresOnBandwidthChangeMono(t *testing.T) {
 	}
 	check(silk.BandwidthWideband, 16000)
 
+	// libopus retains WB while active speech disallows its LP transition;
+	// OPUS_SET_BANDWIDTH requests NB without forcing an immediate reset.
+	originalMid, originalSide := enc.silkEncoder, enc.silkSideEncoder
 	enc.SetBandwidth(types.BandwidthNarrowband)
 	packet, err = encodeTest(enc, pcm, frameSize)
 	if err != nil {
@@ -60,7 +63,13 @@ func TestSILKEncoderReconfiguresOnBandwidthChangeMono(t *testing.T) {
 	if packet == nil {
 		t.Fatal("NB encode returned nil packet")
 	}
-	check(silk.BandwidthNarrowband, 8000)
+	check(silk.BandwidthWideband, 16000)
+	if enc.silkEncoder != originalMid || enc.silkSideEncoder != originalSide {
+		t.Fatal("deferred bandwidth request reset the predictor state")
+	}
+	if len(packet) == 0 || packet[0]>>5 != 2 || enc.requestedSILKBandwidth() != silk.BandwidthNarrowband {
+		t.Fatalf("requested NB must produce a WB packet until switching is allowed: %x", packet)
+	}
 
 	enc.SetBandwidth(types.BandwidthWideband)
 	packet, err = encodeTest(enc, pcm, frameSize)
@@ -73,7 +82,7 @@ func TestSILKEncoderReconfiguresOnBandwidthChangeMono(t *testing.T) {
 	check(silk.BandwidthWideband, 16000)
 }
 
-func TestSILKEncoderReconfiguresOnBandwidthChangeStereo(t *testing.T) {
+func TestSILKEncoderDefersBandwidthChangeDuringSpeechStereo(t *testing.T) {
 	enc := NewEncoder(48000, 2)
 	enc.SetMode(ModeSILK)
 	enc.SetBitrate(48000)
@@ -111,6 +120,9 @@ func TestSILKEncoderReconfiguresOnBandwidthChangeStereo(t *testing.T) {
 	}
 	check(silk.BandwidthWideband, 16000)
 
+	// libopus retains WB while active speech disallows its LP transition;
+	// OPUS_SET_BANDWIDTH requests NB without forcing an immediate reset.
+	originalMid, originalSide := enc.silkEncoder, enc.silkSideEncoder
 	enc.SetBandwidth(types.BandwidthNarrowband)
 	packet, err = encodeTest(enc, pcm, frameSize)
 	if err != nil {
@@ -119,7 +131,13 @@ func TestSILKEncoderReconfiguresOnBandwidthChangeStereo(t *testing.T) {
 	if packet == nil {
 		t.Fatal("stereo NB encode returned nil packet")
 	}
-	check(silk.BandwidthNarrowband, 8000)
+	check(silk.BandwidthWideband, 16000)
+	if enc.silkEncoder != originalMid || enc.silkSideEncoder != originalSide {
+		t.Fatal("deferred bandwidth request reset the predictor state")
+	}
+	if len(packet) == 0 || packet[0]>>5 != 2 || enc.requestedSILKBandwidth() != silk.BandwidthNarrowband {
+		t.Fatalf("requested NB must produce a WB packet until switching is allowed: %x", packet)
+	}
 }
 
 func TestSILKEncoderForcedBandwidthOverridesMaxBandwidthMono(t *testing.T) {

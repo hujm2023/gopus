@@ -432,8 +432,8 @@ func EncodeStereoWithEncoderVADAnalyzersWithSide(
 	nBytesOut := max((re.Tell()+7)>>3, 0)
 
 	// Finalize the range encoder.
-	raw := re.Done()
-	resultLen := min(nBytesOut, len(raw))
+	raw := enc.finalizePacketRange(re)
+	resultLen := len(raw)
 	// Return a view into the range encoder's own buffer (enc.scratchOutput),
 	// matching the mono finalizeEncodeFrame path. The caller copies the bytes
 	// into the packet buffer before the next encode reinitialises this buffer,

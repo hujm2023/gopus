@@ -110,6 +110,11 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 		return nil, ErrInvalidHybridFrameSize
 	}
 
+	incomingBandwidthSwitch := e.silkBWSwitch && allowTransitionRedundancy
+	if incomingBandwidthSwitch {
+		e.runPendingSilkTransitionPrefill(true, false)
+	}
+	e.silkBWSwitch = false
 	// Ensure sub-encoders exist
 	e.ensureSILKEncoder()
 	if e.silkInternalChannels() == 2 {
@@ -188,7 +193,7 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 	// CELT->Hybrid uses celt_to_silk=1; SILK/Hybrid->CELT uses celt_to_silk=0.
 	frameRate := int(e.sampleRate) / frameSize
 	prevPacketMode := e.prevPacketMode
-	transitionCeltToHybrid := allowTransitionRedundancy && !transitionToCELT && !e.lowDelay && isConcreteMode(prevPacketMode) && prevPacketMode == ModeCELT
+	transitionCeltToHybrid := allowTransitionRedundancy && !transitionToCELT && !e.lowDelay && ((isConcreteMode(prevPacketMode) && prevPacketMode == ModeCELT) || incomingBandwidthSwitch)
 	transitionSilkToCELT := allowTransitionRedundancy && transitionToCELT && !e.lowDelay
 	transitionRedundancy := transitionCeltToHybrid || transitionSilkToCELT
 	redundancyBytes := 0
@@ -388,6 +393,7 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 		maxSilkRate := e.computeSilkRateForMax(maxBitsAsBitrate, frame20ms)
 		silkMaxBits = maxSilkRate * frameSize / int(e.sampleRate)
 	}
+	silkMaxBits = e.silkBandwidthMaxBits(silkMaxBits, frameSize)
 	e.silkEncoder.SetMaxBits(silkMaxBits)
 	if e.silkInternalChannels() == 2 {
 		e.silkSideEncoder.ResetPacketState()
@@ -544,6 +550,8 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 	out := e.hybridState.scratchPacket[:len(mainPayload)+len(redundancyData)]
 	copy(out, mainPayload)
 	copy(out[len(mainPayload):], redundancyData)
+	e.silkOpusCanSwitch = e.silkSwitchReady && !e.silkNonfinalFrame
+	e.silkBWSwitch = e.silkOpusCanSwitch && redundancyActive
 	e.hybridFinalRange = mainRng ^ redundantRng
 	return out, nil
 }
