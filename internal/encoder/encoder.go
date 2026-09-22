@@ -280,6 +280,7 @@ type Encoder struct {
 	silkMaxInternalRate   int
 	silkInternalRate      int
 	silkSwitchReady       bool
+	silkSideSwitchReady   bool
 	silkNonfinalFrame     bool
 	silkOpusCanSwitch     bool
 	silkBWSwitch          bool
@@ -591,6 +592,7 @@ func (e *Encoder) Reset() {
 	e.silkMaxInternalRate = 0
 	e.silkInternalRate = 0
 	e.silkSwitchReady = false
+	e.silkSideSwitchReady = false
 	e.silkNonfinalFrame = false
 	e.silkOpusCanSwitch = false
 	e.silkBWSwitch = false
@@ -4911,6 +4913,7 @@ func (e *Encoder) syncCELTEnergyMask() {
 // SILK sampling rate, which can change only at the bandwidth-switch handshake.
 func (e *Encoder) controlSILKBandwidth(mode Mode) {
 	e.silkSwitchReady = false
+	e.silkSideSwitchReady = false
 	e.silkRedundantRange = 0
 	e.silkRedundancyBytes = 0
 	e.silkRedundancyReserve = 0
@@ -4945,16 +4948,30 @@ func (e *Encoder) controlSILKBandwidth(mode Mode) {
 		}
 		// Bandwidth control runs independently per channel. The side sample rate
 		// is forced to the mid rate later, but its filter memory remains its own.
-		sideLP.ControlBandwidth(sideCurrent, desired, minimum, e.silkMaxInternalRate, int(e.sampleRate), allow, e.silkOpusCanSwitch)
+		// Its switchReady is kept because libopus runs silk_control_encoder once
+		// per internal channel against the shared encControl->maxBits, so the
+		// "make room for redundancy" reduction can apply once per channel.
+		_, e.silkSideSwitchReady = sideLP.ControlBandwidth(sideCurrent, desired, minimum, e.silkMaxInternalRate, int(e.sampleRate), allow, e.silkOpusCanSwitch)
 		e.silkSideEncoder.SetLPState(sideLP)
 	}
 }
 
+// silkBandwidthMaxBits mirrors the libopus "make room for redundancy" reduction
+// in silk_control_audio_bandwidth() (control_audio_bandwidth.c:90/118). libopus
+// calls silk_control_encoder once per internal channel with a single shared
+// encControl, so each channel whose bandwidth control reports switchReady
+// reduces the already-reduced encControl->maxBits, and every channel then encodes
+// against that same reduced value.
 func (e *Encoder) silkBandwidthMaxBits(bits, frameSize int) int {
 	bits = max(bits-e.silkRedundancyReserve, 0)
-	if e.silkSwitchReady {
-		payloadMS := frameSize * 1000 / int(e.sampleRate)
-		bits -= bits * 5 / (payloadMS + 5)
+	if bits <= 0 {
+		return bits
+	}
+	payloadMS := frameSize * 1000 / int(e.sampleRate)
+	for _, ready := range [2]bool{e.silkSwitchReady, e.silkSideSwitchReady} {
+		if ready {
+			bits -= bits * 5 / (payloadMS + 5)
+		}
 	}
 	return bits
 }
