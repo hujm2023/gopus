@@ -378,7 +378,9 @@ func (e *Encoder) detectPitch(pcm []float32, numSubframes int, searchThres1, sea
 		}
 		d := (int(dSrch[i]) + minLag4kHz) * 2
 		dSrch[i] = int32(d)
-		if d >= minLag8kHz && d <= maxLag8kHz {
+		// Preserve the 18 ms coarse candidate: its 8 kHz index is one
+		// above maxLag8kHz, and convolution expands it into a legal lag.
+		if d >= minLag8kHz && d < len(dComp) {
 			dComp[d] = 1
 		}
 	}
