@@ -1477,7 +1477,15 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 		}
 	}
 
-	// 4. Encode Mid Frame
+	// 4. Encode Mid Frame.
+	// libopus selects condCoding per channel from state_Fxx[0].nFramesEncoded at
+	// block start, so the mid channel of the first internal frame codes
+	// independently and later frames (and the side channel) code conditionally.
+	prevDecodeOnlyMiddle := 0
+	if e.hybridState != nil && e.hybridState.prevDecodeOnlyMiddle {
+		prevDecodeOnlyMiddle = 1
+	}
+	e.silkEncoder.SetStereoCondContext(e.silkEncoder, int(e.silkEncoder.NFramesEncoded()), 0, prevDecodeOnlyMiddle)
 	_ = e.silkEncoder.EncodeFrame(mid, nil, vadMid)
 
 	// 5. Encode Side Frame (skip if mid-only)
@@ -1485,6 +1493,7 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 		if e.hybridState != nil && e.hybridState.prevDecodeOnlyMiddle {
 			e.silkSideEncoder.ResetStereoSideAfterMidOnly()
 		}
+		e.silkSideEncoder.SetStereoCondContext(e.silkEncoder, int(e.silkEncoder.NFramesEncoded()), 1, prevDecodeOnlyMiddle)
 		_ = e.silkSideEncoder.EncodeFrame(side, nil, vadSide)
 	}
 

@@ -662,6 +662,7 @@ func (e *Encoder) ResetPacketState() {
 	e.resetFixedDTXPacket()
 	e.nFramesEncoded = 0
 	e.stereoCondMid = nil
+	e.stereoCondMidFramesEncoded = 0
 	e.stereoChannelIdx = 0
 	e.stereoPrevDecodeOnlyMiddle = 0
 	e.forceFirstFrameAfterReset = e.reducedDependency
@@ -976,6 +977,27 @@ func (e *Encoder) SetFramesPerPacket(n int) {
 		n = 1
 	}
 	e.nFramesPerPacket = int32(n)
+}
+
+// NFramesEncoded reports how many internal SILK frames of the current packet have
+// been encoded. libopus selects stereo condCoding from this value, so the Opus-level
+// Hybrid leg reads it to mirror enc_API.c.
+func (e *Encoder) NFramesEncoded() int32 {
+	return e.nFramesEncoded
+}
+
+// SetStereoCondContext pins the stereo conditional-coding context the Opus-level
+// Hybrid leg must supply. libopus selects condCoding in enc_API.c from
+// state_Fxx[0].sCmn.nFramesEncoded (the internal frame index within the packet)
+// minus the channel index, so only the first internal frame of a packet codes
+// each channel independently, and a side frame that follows a mid-only frame is
+// coded without LTP scaling. mid is the mid-channel encoder the side channel is
+// conditioned on (nil for the mid itself, which passes its own pointer).
+func (e *Encoder) SetStereoCondContext(mid *Encoder, midFramesEncodedInPacket, channelIdx, prevDecodeOnlyMiddle int) {
+	e.stereoCondMid = mid
+	e.stereoCondMidFramesEncoded = int32(midFramesEncodedInPacket)
+	e.stereoChannelIdx = int32(channelIdx)
+	e.stereoPrevDecodeOnlyMiddle = int32(prevDecodeOnlyMiddle)
 }
 
 // SetFEC enables or disables in-band Forward Error Correction (LBRR).
