@@ -475,6 +475,8 @@ func (e *Encoder) Reset() {
 	e.lastTonality = opusVal16(0.5)
 	e.lastStereoSaving = 0
 	e.lastPitchChange = false
+	e.specAvg = 0
+	e.lastTemporalVBR = 0
 	e.analysisBandwidth = 20
 	e.analysisValid = false
 	e.analysisActivity = 0
