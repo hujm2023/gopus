@@ -2,6 +2,7 @@ package gopus
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	encodercore "github.com/hujm2023/gopus/internal/encoder"
@@ -487,6 +488,48 @@ func TestMultistreamEncoder_EncodeInt24InvalidFrameSize(t *testing.T) {
 	}
 }
 
+// multistreamStreamLengths splits a multistream packet into its elementary
+// stream packet lengths per RFC 6716 Appendix B: the first N-1 elementary
+// packets carry a self-delimited length prefix (1 byte when the length is below
+// 252, otherwise 2 bytes encoded as 4*second+first) and the final stream
+// consumes the remaining bytes. It mirrors multistream.parseSelfDelimitedLength
+// so the test measures the same framing the encoder writes.
+func multistreamStreamLengths(pkt []byte, streams int) ([]int, error) {
+	if streams < 1 {
+		return nil, fmt.Errorf("streams=%d", streams)
+	}
+	lengths := make([]int, 0, streams)
+	off := 0
+	for i := 0; i < streams-1; i++ {
+		// Each elementary packet starts with its own TOC byte; the
+		// self-delimiting length that follows covers that packet's payload.
+		if off >= len(pkt) {
+			return nil, fmt.Errorf("stream %d: truncated at offset %d/%d", i, off, len(pkt))
+		}
+		off++
+		if off >= len(pkt) {
+			return nil, fmt.Errorf("stream %d: truncated before length field", i)
+		}
+		body := int(pkt[off])
+		lenBytes := 1
+		if body >= 252 {
+			if off+1 >= len(pkt) {
+				return nil, fmt.Errorf("stream %d: truncated two-byte length field", i)
+			}
+			body = 4*int(pkt[off+1]) + body
+			lenBytes = 2
+		}
+		off += lenBytes
+		if off+body > len(pkt) {
+			return nil, fmt.Errorf("stream %d: payload %d overruns packet (%d bytes left)", i, body, len(pkt)-off)
+		}
+		lengths = append(lengths, 1+lenBytes+body)
+		off += body
+	}
+	lengths = append(lengths, len(pkt)-off)
+	return lengths, nil
+}
+
 func TestMultistreamEncoder_CVBRPacketEnvelope(t *testing.T) {
 	enc := mustNewDefaultMultistreamEncoder(t, 48000, 6, ApplicationAudio)
 
@@ -507,7 +550,13 @@ func TestMultistreamEncoder_CVBRPacketEnvelope(t *testing.T) {
 		}
 		enc.Reset()
 
+		// The 1275-byte limit is an Opus *packet* limit (RFC 6716 section 3.4),
+		// i.e. it applies to each elementary stream packet, not to the
+		// self-delimited multistream aggregate: at 384 kbps a 6-channel stream
+		// converges to ~960 B across four streams plus framing. Measure each
+		// stream separately and keep the aggregate only for reporting.
 		maxPacket := 0
+		maxStreamPacket := 0
 		for i := range 10 {
 			n, err := enc.Encode(pcm, data)
 			if err != nil {
@@ -516,10 +565,22 @@ func TestMultistreamEncoder_CVBRPacketEnvelope(t *testing.T) {
 			if n > maxPacket {
 				maxPacket = n
 			}
+			sizes, err := multistreamStreamLengths(data[:n], enc.Streams())
+			if err != nil {
+				t.Fatalf("bitrate=%d frame=%d split streams: %v", bitrate, i, err)
+			}
+			for stream, size := range sizes {
+				if size > 1275 {
+					t.Fatalf("bitrate=%d frame=%d stream=%d packet=%d exceeds the 1275-byte Opus packet limit (aggregate=%d over %d streams)",
+						bitrate, i, stream, size, n, enc.Streams())
+				}
+				if size > maxStreamPacket {
+					maxStreamPacket = size
+				}
+			}
 		}
-		if maxPacket > 1275 {
-			t.Fatalf("bitrate=%d max packet=%d exceeds 1275-byte envelope", bitrate, maxPacket)
-		}
+		t.Logf("bitrate=%d max aggregate packet=%d, max elementary packet=%d over %d streams",
+			bitrate, maxPacket, maxStreamPacket, enc.Streams())
 	}
 }
 
