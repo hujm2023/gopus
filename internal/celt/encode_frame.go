@@ -658,6 +658,14 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 		e.lastTemporalVBR = celtGLog(temporalVBR)
 	}
 
+	// Analysis arrays use the active-band stride, while predictor history keeps
+	// the full mode stride. Pack both channels before transient/dynalloc analysis.
+	var oldAnalysisStorage [2 * MaxBands]celtGLog
+	oldAnalysisEnergies := oldAnalysisStorage[:nbBands*codedChannels]
+	for ch := range codedChannels {
+		copy(oldAnalysisEnergies[ch*nbBands:(ch+1)*nbBands], e.prevEnergy[ch*e.predStride():ch*e.predStride()+nbBands])
+	}
+
 	// Step 6.5: Patch transient decision based on band energy comparison
 	// This is a "second chance" to detect transients that time-domain analysis missed.
 	// Particularly important for the first frame where buffer initialization may cause
@@ -665,12 +673,8 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 	// Reference: libopus celt/celt_encoder.c lines 2215-2231
 	end := nbBands
 	if lm > 0 && !transient && e.complexity >= 5 && !e.IsHybrid() && !e.lfe {
-		// Get previous frame's band energies (oldBandE in libopus)
-		oldBandE := ensureGLogSlice(&e.scratch.coarseOldStart, len(e.prevEnergy))
-		copy(oldBandE, e.prevEnergy)
-
 		spreadOld := ensureGLogSlice(&e.scratch.transientSpreadOld, end)
-		if PatchTransientDecisionWithScratch(energies, oldBandE, nbBands, 0, end, codedChannels, spreadOld) {
+		if PatchTransientDecisionWithScratch(energies, oldAnalysisEnergies, nbBands, 0, end, codedChannels, spreadOld) {
 			// Transient patched! Need to recompute MDCT with short blocks
 			transient = true
 			shortBlocks = mode.ShortBlocks
@@ -898,7 +902,6 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 	if bandLogE2 != nil {
 		bandLogE2Use = bandLogE2
 	}
-	oldBandELen := min(nbBands*codedChannels, len(prev1LogE))
 	surroundTrimForAlloc := e.surroundTrim
 	var surroundDynalloc []celtGLog
 	var surroundDynallocScratch [MaxBands]celtGLog
@@ -907,7 +910,7 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 		surroundDynalloc = surroundDynallocScratch[:nbBands]
 	}
 	dynallocResult := DynallocAnalysisWithScratch(
-		analysisEnergies, bandLogE2Use, prev1LogE[:oldBandELen],
+		analysisEnergies, bandLogE2Use, oldAnalysisEnergies,
 		nbBands, start, end, codedChannels, lsbDepth, lm,
 		logN,
 		effectiveBytes,
