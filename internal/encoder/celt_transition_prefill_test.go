@@ -257,3 +257,16 @@ func hasNonZeroFloat32(v []float32) bool {
 	}
 	return false
 }
+
+// A silent current frame must not erase the saved non-silent delay history.
+func TestCELTTransitionPrefillUsesSavedHistory(t *testing.T) {
+	enc := NewEncoder(48000, 1)
+	enc.prevMode = ModeSILK
+	enc.scratchTransitionPrefill = makeTransitionPCM(120, 1)
+	enc.maybePrefillCELTOnModeTransition(ModeHybrid, make([]opusRes, 960), 960)
+	history := make([]float32, 120)
+	enc.celtEncoder.OverlapBufferInto(history)
+	if !hasNonZeroFloat32(history) {
+		t.Fatal("saved delay history was replaced by the silent current frame")
+	}
+}

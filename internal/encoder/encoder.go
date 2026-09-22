@@ -2270,11 +2270,10 @@ func (e *Encoder) maybePrefillCELTOnModeTransition(actualMode Mode, celtPCM []op
 		return
 	}
 	prefillInput := celtPCM[:prefillSamples]
-	if len(e.scratchTransitionPrefill) == prefillSamples {
-		prefillInput = e.scratchTransitionPrefill
-	}
 	if e.hasCELTPrefill && len(e.scratchCELTPrefill) >= prefillSamples {
 		prefillInput = e.scratchCELTPrefill[:prefillSamples]
+	} else if len(e.scratchTransitionPrefill) == prefillSamples {
+		prefillInput = e.scratchTransitionPrefill
 	} else if delayComp := sampleRate / 250; delayComp > 0 {
 		// Match libopus tmp_prefill source as closely as possible with the
 		// available delay-compensated CELT window.
