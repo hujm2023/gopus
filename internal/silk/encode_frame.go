@@ -325,7 +325,8 @@ func (e *Encoder) EncodeFrame(pcm []float32, lookahead []float32, vadFlag bool) 
 		quantOffset = processedQuantOffset
 	}
 	if noiseParams != nil {
-		noiseParams.LambdaQ10 = computeLambdaQ10(signalType, int(speechActivityQ8), quantOffset, int(e.nStatesDelayedDecision), noiseParams.CodingQuality, noiseParams.InputQuality)
+		noiseParams.Lambda = computeLambdaFloat(signalType, int(speechActivityQ8), quantOffset, int(e.nStatesDelayedDecision), noiseParams.CodingQuality, noiseParams.InputQuality)
+		noiseParams.LambdaQ10 = float32ToInt32RoundEven(noiseParams.Lambda * 1024.0)
 	}
 
 	// Step 7: Prepare indices and gains for bitrate control loop.
@@ -644,12 +645,11 @@ func (e *Encoder) EncodeFrame(pcm []float32, lookahead []float32, vadFlag bool) 
 		if nBits > maxBits {
 			if !foundLower && iter >= 2 {
 				if noiseParams != nil {
-					lambda := max(
-						// Match libopus encode_frame_FLP.c:
-						// sEncCtrl.Lambda = silk_max_float(sEncCtrl.Lambda*1.5f, 1.5f)
-						// (Q10 => minimum 1.5 * 1024 = 1536).
-						noiseParams.LambdaQ10+noiseParams.LambdaQ10/2, 1536)
-					noiseParams.LambdaQ10 = lambda
+					// Match libopus encode_frame_FLP.c: the bump applies to the float
+					// Lambda and the Q10 value is re-rounded from it, so a
+					// non-integer float does not lose the 0.5 boundary.
+					noiseParams.Lambda = max(noiseParams.Lambda*1.5, 1.5)
+					noiseParams.LambdaQ10 = float32ToInt32RoundEven(noiseParams.Lambda * 1024.0)
 				}
 				quantOffset = 0
 				foundUpper = false

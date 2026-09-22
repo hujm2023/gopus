@@ -80,6 +80,7 @@ type NoiseShapeParams struct {
 
 	// Frame-level parameters
 	LambdaQ10     int32   // Rate-distortion tradeoff (Q10, opus_int-width)
+	Lambda        float32 // Rate-distortion tradeoff (float, silk_float)
 	CodingQuality float32 // Coding quality [0, 1]
 	InputQuality  float32 // Input quality [0, 1]
 }
@@ -87,6 +88,13 @@ type NoiseShapeParams struct {
 // computeLambdaQ10 recomputes the Lambda (rate-distortion tradeoff) using the
 // provided quantization offset type. This mirrors the logic in ComputeNoiseShapeParams.
 func computeLambdaQ10(signalType, speechActivityQ8, quantOffsetType, nStatesDelayedDecision int, codingQuality, inputQuality float32) int32 {
+	return float32ToInt32RoundEven(computeLambdaFloat(signalType, speechActivityQ8, quantOffsetType, nStatesDelayedDecision, codingQuality, inputQuality) * 1024.0)
+}
+
+// computeLambdaFloat returns the float Lambda that libopus keeps in
+// silk_encoder_control_FLP.Lambda; the Q10 value the NSQ consumes is rounded
+// from this float on every use (silk/float/wrappers_FLP.c:133).
+func computeLambdaFloat(signalType, speechActivityQ8, quantOffsetType, nStatesDelayedDecision int, codingQuality, inputQuality float32) float32 {
 	quantOffset := float32(silk_Quantization_Offsets_Q10[signalType>>1][quantOffsetType]) / 1024.0
 	lambda := lambdaOffset +
 		lambdaDelayedDecisions*float32(nStatesDelayedDecision) +
@@ -95,14 +103,14 @@ func computeLambdaQ10(signalType, speechActivityQ8, quantOffsetType, nStatesDela
 		lambdaCodingQuality*codingQuality +
 		lambdaQuantOffset*quantOffset
 
-	// Keep lambda in the valid range and match libopus float->int rounding.
+	// Keep lambda in the valid range, matching silk/float/noise_shape_analysis_FLP.c.
 	if lambda < 0 {
 		lambda = 0
 	}
 	if lambda > 2.0 {
 		lambda = 2.0
 	}
-	return float32ToInt32RoundEven(lambda * 1024.0)
+	return lambda
 }
 
 // ComputeNoiseShapeParams computes adaptive noise shaping parameters.
@@ -169,6 +177,8 @@ func (s *NoiseShapeState) ComputeNoiseShapeParams(
 	if lambda > 2.0 {
 		lambda = 2.0
 	}
+	params.Lambda = lambda
+	params.Lambda = lambda
 	params.LambdaQ10 = float32ToInt32RoundEven(lambda * 1024.0)
 
 	// Compute Tilt (spectral noise tilt)
