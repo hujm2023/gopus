@@ -1348,12 +1348,15 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 	targetRate := e.silkEncoder.StereoAllocationTargetRate(totalRateBps, silkSamples, 0)
 	// Convert to mid-side with libopus-aligned stereo front-end.
 	fsKHz := 16 // SILK wideband uses 16kHz
-	mid, side, predIdx, midOnly, midRate, sideRate, widthQ14 := e.silkEncoder.StereoLRToMSWithRates(
-		left, right, silkSamples, fsKHz, targetRate, e.lastVADActivityQ8, false,
+	mid, side, predIdx, midOnly, midRate, sideRate, _ := e.silkEncoder.StereoLRToMSWithRates(
+		left, right, silkSamples, fsKHz, targetRate, e.lastVADActivityQ8, e.toMono != 0,
 	)
 	e.silkEncoder.SaveStereoLBRR(predIdx, midOnly)
 	if e.hybridState != nil {
-		e.hybridState.silkStereoWidthQ14 = widthQ14
+		e.hybridState.silkStereoWidthQ14 = e.silkEncoder.SmoothedStereoWidthQ14()
+		if e.toMono != 0 {
+			e.hybridState.silkStereoWidthQ14 = 0
+		}
 	}
 	// Apply per-channel split from stereo front-end before encoding.
 	if midRate > 0 {

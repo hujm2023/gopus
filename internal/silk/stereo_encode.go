@@ -509,6 +509,12 @@ func (e *Encoder) StereoEncodeLRToMSWithInterpQuantized(left, right []float32, f
 	return midOut, sideOut, predQ13, ix
 }
 
+// SmoothedStereoWidthQ14 returns the stereo width used by the CELT high band.
+// SILK may quantize its own width to zero while this smoother remains nonzero.
+func (e *Encoder) SmoothedStereoWidthQ14() int16 {
+	return e.stereo.smthWidthQ14
+}
+
 // StereoLRToMSWithRates is a libopus-aligned stereo front-end that computes
 // mid/side signals, predictor indices, mid-only decision, and per-channel rates.
 //
