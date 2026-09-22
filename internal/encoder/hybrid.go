@@ -1376,14 +1376,11 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 
 	vadSide := false
 	if !midOnly {
-		vadSide = e.computeSilkVADSide(side, len(side), fsKHz)
-	}
-	if e.silkSideEncoder != nil {
-		if e.silkVADSide != nil {
-			e.silkSideEncoder.SetVADState(e.silkVADSide.SpeechActivityQ8, e.silkVADSide.InputTiltQ15, e.silkVADSide.InputQualityBandsQ15)
-		} else {
-			e.silkSideEncoder.SetVADState(e.lastVADActivityQ8, e.lastVADInputTiltQ15, e.lastVADInputQualityBandsQ15)
-		}
+		var sideState silk.VADFrameState
+		sideState, vadSide = e.computeSilkVADSide(side, len(side), fsKHz)
+		// Use the Opus-adjusted activity for shaping and quantization too,
+		// while retaining the analyzer's own history for the next frame.
+		applySilkVADFrameState(e.silkSideEncoder, sideState)
 	}
 
 	const nBitsHeader = 2

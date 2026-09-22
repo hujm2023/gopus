@@ -4434,14 +4434,13 @@ func (e *Encoder) computeSilkVAD(mono []float32, frameSamples, fsKHz int) bool {
 	return active
 }
 
-func (e *Encoder) computeSilkVADSide(mono []float32, frameSamples, fsKHz int) bool {
+func (e *Encoder) computeSilkVADSide(mono []float32, frameSamples, fsKHz int) (silk.VADFrameState, bool) {
 	if frameSamples <= 0 || fsKHz <= 0 {
-		return false
+		return silk.VADFrameState{}, false
 	}
 	e.ensureSilkVADSide()
 	state, active := computeSilkVADFrameState(e.silkVADSide, mono, frameSamples, fsKHz)
-	_, active = e.applyOpusVADToSilkState(state, active)
-	return active
+	return e.applyOpusVADToSilkState(state, active)
 }
 
 func computeSilkFrameLayout(pcmLen, fsKHz int) (frameSamples, nFrames int) {
