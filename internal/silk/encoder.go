@@ -146,6 +146,9 @@ type Encoder struct {
 	packetLossPercent     int32                               // Expected packet loss (0-100)
 	nFramesEncoded        int32                               // Number of frames encoded in current packet
 	nFramesPerPacket      int32                               // Number of frames per packet
+	// prevChannelsInternal mirrors libopus psEnc->nPrevChannelsInternal: the
+	// internal channel count of the previous silk_Encode call (silk/enc_API.c:580).
+	prevChannelsInternal int32
 	// Stereo packet condCoding uses mid nFramesEncoded at block start (libopus enc_API.c).
 	stereoCondMid              *Encoder
 	stereoCondMidFramesEncoded int32
@@ -977,6 +980,16 @@ func (e *Encoder) SetFramesPerPacket(n int) {
 	}
 	e.nFramesPerPacket = int32(n)
 }
+
+// PrevChannelsInternal reports the internal channel count of the previous SILK
+// encode call, mirroring libopus psEnc->nPrevChannelsInternal (silk/enc_API.c:580).
+// libopus uses it to average the two lowband resampler states on the first mono
+// frame after a stereo frame (:323-331).
+func (e *Encoder) PrevChannelsInternal() int32 { return e.prevChannelsInternal }
+
+// SetChannelsInternal records the internal channel count of the current SILK
+// encode call; the value becomes nPrevChannelsInternal for the next call.
+func (e *Encoder) SetChannelsInternal(n int) { e.prevChannelsInternal = int32(n) }
 
 // SetStereoMidOnly records the current frame's mid-only (side not coded) decision.
 // libopus keeps this in the single psEnc->prev_decode_only_middle field, which both

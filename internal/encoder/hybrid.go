@@ -1053,7 +1053,12 @@ func (e *Encoder) resampleHybridSILKLowband(samples []opusRes, frameSize int) []
 		downmixStereoToSilkMonoLibopus(mono, stereo32, frameSize)
 		out := e.ensureSilkResampled(targetSamples)
 		n := e.silkResampler.ProcessInto(mono, out)
-		if e.prevChannels == 2 && e.silkResamplerRight != nil {
+		// libopus averages the two lowband resampler states on the first mono
+		// frame after a stereo frame (silk/enc_API.c:323-331). The guard is
+		// psEnc->nPrevChannelsInternal == 2, which gopus's e.prevChannels no
+		// longer reflects by the time the Hybrid leg runs (auto_mode.go:654 has
+		// advanced it), so read the SILK-level mirror instead.
+		if e.silkEncoder.PrevChannelsInternal() == 2 && e.silkResamplerRight != nil {
 			rightOut := e.ensureSilkResampledR(targetSamples)
 			nR := e.silkResamplerRight.ProcessInto(mono, rightOut)
 			if nR < n {
@@ -1309,7 +1314,7 @@ func (e *Encoder) encodeSILKHybridMono(pcm []float32, lookahead []float32, silkS
 	inputSamples := pcm[:min(len(pcm), silkSamples)]
 	// Match standalone SILK mono buffering: encoder consumes inputBuf+1 with
 	// a 1-sample handoff across frames.
-	inputSamples = e.alignSilkMonoInput(inputSamples)
+	inputSamples = e.alignSILKSharedMidInput(inputSamples)
 	quantizeFloat32ToInt16LibopusInPlace(inputSamples)
 	vadFlag := e.computeSilkVAD(inputSamples, len(inputSamples), 16)
 	e.silkEncoder.SetVADState(e.lastVADActivityQ8, e.lastVADInputTiltQ15, e.lastVADInputQualityBandsQ15)
@@ -1357,6 +1362,7 @@ func (e *Encoder) encodeSILKHybridMono(pcm []float32, lookahead []float32, silkS
 		nBytesOut = 0
 	}
 	e.silkEncoder.UpdatePacketBitsExceeded(nBytesOut, payloadSizeMs, totalRateBps)
+	e.silkEncoder.SetChannelsInternal(1)
 }
 
 // encodeSILKHybridStereo encodes stereo SILK data for hybrid mode.
@@ -1532,6 +1538,7 @@ func (e *Encoder) encodeSILKHybridStereo(pcm []float32, lookahead []float32, sil
 	if e.hybridState != nil {
 		e.hybridState.prevDecodeOnlyMiddle = midOnly
 	}
+	e.silkEncoder.SetChannelsInternal(2)
 }
 
 // celtBandwidthFromTypes maps types.Bandwidth to CELT bandwidth.

@@ -2572,7 +2572,7 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 		}
 		silkIn = out[:n]
 	}
-	silkIn = e.alignSilkMonoInput(silkIn)
+	silkIn = e.alignSILKSharedMidInput(silkIn)
 	fsKHz := targetRate / 1000
 	if fsKHz <= 0 {
 		fsKHz = 16
@@ -3458,7 +3458,7 @@ func (e *Encoder) encodeSILKFrameBody(pcm []opusRes, lookahead []opusRes, frameS
 	// mono internal channels use sStereo.sMid history across frames.
 	// This applies to all SILK internal rates (8/12/16 kHz), not only WB.
 	if internalChannels == 1 {
-		pcm32 = e.alignSilkMonoInput(pcm32)
+		pcm32 = e.alignSILKSharedMidInput(pcm32)
 	}
 	quantizeFloat32ToInt16LibopusInPlace(pcm32)
 	perChannelRate := 0
@@ -3494,6 +3494,7 @@ func (e *Encoder) encodeSILKFrameBody(pcm []opusRes, lookahead []opusRes, frameS
 		e.silkEncoder.SetVADState(e.lastVADActivityQ8, e.lastVADInputTiltQ15, e.lastVADInputQualityBandsQ15)
 	}
 	res := e.silkEncoder.EncodeFrame(pcm32, lookaheadOut, vadFlag)
+	e.silkEncoder.SetChannelsInternal(internalChannels)
 	return res, nil
 }
 
@@ -4307,6 +4308,36 @@ func (e *Encoder) ensureSilkVADSide() {
 	if e.silkVADSide == nil {
 		e.silkVADSide = NewVADState()
 	}
+}
+
+// alignSILKSharedMidInput mirrors libopus's single shared SILK mid history
+// buffer (psEnc->sStereo.sMid). The stereo front-end leaves the last two mid
+// samples there; the mono branch copies sMid[1] to inputBuf[0], shifts the frame
+// by one sample and refreshes sMid from the frame tail (silk/enc_API.c:477-481).
+// Sharing that one buffer is what carries the stereo mid samples into the first
+// mono frame of a stereo->mono transition.
+func (e *Encoder) alignSILKSharedMidInput(in []float32) []float32 {
+	n := len(in)
+	if n == 0 {
+		return in
+	}
+	if e.silkEncoder == nil {
+		return e.alignSilkMonoInput(in)
+	}
+	if cap(e.scratchSilkAligned) < n {
+		e.scratchSilkAligned = make([]float32, n)
+	}
+	out := e.scratchSilkAligned[:n]
+	hist := e.silkEncoder.StereoMidHistory()
+	out[0] = float32(hist[1]) * (1.0 / 32768.0)
+	if n > 1 {
+		copy(out[1:], in[:n-1])
+		e.silkEncoder.SetStereoMidHistory([2]int16{
+			int16(float32ToInt16Libopus(in[n-2])),
+			int16(float32ToInt16Libopus(in[n-1])),
+		})
+	}
+	return out
 }
 
 func (e *Encoder) alignSilkMonoInput(in []float32) []float32 {

@@ -511,6 +511,13 @@ func (e *Encoder) StereoEncodeLRToMSWithInterpQuantized(left, right []float32, f
 
 // SmoothedStereoWidthQ14 returns the stereo width used by the CELT high band.
 // SILK may quantize its own width to zero while this smoother remains nonzero.
+// StereoMidHistory returns the stereo mid history (libopus psEnc->sStereo.sMid),
+// the single mid buffer shared by the SILK stereo and mono front-ends.
+func (e *Encoder) StereoMidHistory() [2]int16 { return e.stereo.sMid }
+
+// SetStereoMidHistory stores the stereo mid history (libopus psEnc->sStereo.sMid).
+func (e *Encoder) SetStereoMidHistory(h [2]int16) { e.stereo.sMid = h }
+
 func (e *Encoder) SmoothedStereoWidthQ14() int16 {
 	return e.stereo.smthWidthQ14
 }
