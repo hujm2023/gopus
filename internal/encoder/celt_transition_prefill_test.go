@@ -246,7 +246,7 @@ func TestSilkTransitionPrefillStereoPrimesMidAndSide(t *testing.T) {
 	if !hasNonZeroFloat32(enc.silkSideEncoder.InputBuffer()) {
 		t.Fatal("expected stereo transition prefill to prime side SILK history")
 	}
-	if enc.silkVADMidFeedback == nil || enc.silkVADSide == nil {
+	if enc.silkVAD == nil || enc.silkVADSide == nil {
 		t.Fatal("expected stereo transition prefill to run mid and side VAD")
 	}
 }

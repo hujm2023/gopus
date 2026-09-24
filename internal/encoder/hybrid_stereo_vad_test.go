@@ -29,10 +29,10 @@ func TestHybridStereoContinuesPrefillMidVAD(t *testing.T) {
 		enc.delayBuffer[i] = opusRes(pcm[i])
 	}
 	enc.maybePrefillSILKOnModeTransitionWithOptions(ModeHybrid, false, false, enc.silkInputBitrate(480))
-	if enc.silkVADMidFeedback == nil {
+	if enc.silkVAD == nil {
 		t.Fatal("stereo prefill did not initialize mid VAD")
 	}
-	previous := enc.silkVADMidFeedback.Counter
+	previous := enc.silkVAD.Counter
 	// The prefill is complete; encode consecutive Hybrid packets using that history.
 	enc.prevMode = ModeHybrid
 	enc.prevPacketMode = ModeHybrid
@@ -40,7 +40,7 @@ func TestHybridStereoContinuesPrefillMidVAD(t *testing.T) {
 		if _, err := enc.Encode(pcm[frame*960:(frame+1)*960], 480); err != nil {
 			t.Fatal(err)
 		}
-		if got := enc.silkVADMidFeedback.Counter; got != previous+1 {
+		if got := enc.silkVAD.Counter; got != previous+1 {
 			t.Fatalf("frame %d: mid VAD counter=%d, want %d after prefill", frame, got, previous+1)
 		}
 		previous++
@@ -59,7 +59,7 @@ func TestSILKStereoPublishesMidVADForHybrid(t *testing.T) {
 	if _, err := e.encodeSILKFrameWithDREDAndMax(pcm, nil, 960, 32000, 0, 1276); err != nil {
 		t.Fatal(err)
 	}
-	if !e.lastVADValid || e.lastVADActivityQ8 != int32(e.silkVADMidFeedback.SpeechActivityQ8) {
+	if !e.lastVADValid || e.lastVADActivityQ8 != int32(e.silkVAD.SpeechActivityQ8) {
 		t.Fatal("standalone stereo SILK left stale mid activity for Hybrid rate allocation")
 	}
 }

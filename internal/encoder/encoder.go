@@ -161,7 +161,6 @@ type Encoder struct {
 	// final range of 0. It is transient per Encode call.
 	multiFrameLastSubframeDTX bool
 	silkVAD                   *VADState
-	silkVADMidFeedback        *VADState
 	silkVADSide               *VADState
 	fec                       *fecState
 
@@ -2524,11 +2523,11 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 	if e.silkResamplerRight != nil {
 		e.silkResamplerRight.SetState(silk.ResamplerState{})
 	}
+	// libopus keeps one VAD state per SILK channel (state_Fxx[n].sCmn.sVAD);
+	// the stereo mid channel and the mono channel are both channel 0.
 	e.ensureSilkVAD()
 	e.silkVAD.Reset()
 	if e.channels == 2 {
-		e.ensureSilkVADMidFeedback()
-		e.silkVADMidFeedback.Reset()
 		e.ensureSilkVADSide()
 		e.silkVADSide.Reset()
 	}
@@ -2675,8 +2674,8 @@ func (e *Encoder) runSilkStereoTransitionPrefill(prefill []opusRes, prefillFrame
 		e.silkSideEncoder.SetBitrate(sideRate)
 	}
 
-	e.ensureSilkVADMidFeedback()
-	midState, midActive := computeSilkVADFrameState(e.silkVADMidFeedback, mid, len(mid), fsKHz)
+	e.ensureSilkVAD()
+	midState, midActive := computeSilkVADFrameState(e.silkVAD, mid, len(mid), fsKHz)
 	midState, midActive = e.applyOpusVADToSilkState(midState, midActive)
 	if midState.Valid {
 		e.lastVADActivityQ8 = midState.SpeechActivityQ8
@@ -3384,9 +3383,9 @@ func (e *Encoder) encodeSILKFrameBody(pcm []opusRes, lookahead []opusRes, frameS
 		}
 		quantizeFloat32ToInt16LibopusInPlace(left)
 		quantizeFloat32ToInt16LibopusInPlace(right)
-		e.ensureSilkVADMidFeedback()
+		e.ensureSilkVAD()
 		midFeedbackAnalyzer := func(frame []float32, frameSamples, fsKHz int) (silk.VADFrameState, bool) {
-			state, active := computeSilkVADFrameState(e.silkVADMidFeedback, frame, frameSamples, fsKHz)
+			state, active := computeSilkVADFrameState(e.silkVAD, frame, frameSamples, fsKHz)
 			state, active = e.applyOpusVADToSilkState(state, active)
 			e.lastVADActivityQ8 = state.SpeechActivityQ8
 			e.lastVADInputTiltQ15 = state.InputTiltQ15
@@ -4295,12 +4294,6 @@ func (e *Encoder) ensureSILKResampler(rate int) {
 func (e *Encoder) ensureSilkVAD() {
 	if e.silkVAD == nil {
 		e.silkVAD = NewVADState()
-	}
-}
-
-func (e *Encoder) ensureSilkVADMidFeedback() {
-	if e.silkVADMidFeedback == nil {
-		e.silkVADMidFeedback = NewVADState()
 	}
 }
 
