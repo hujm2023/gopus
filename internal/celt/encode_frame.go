@@ -433,7 +433,7 @@ func (e *Encoder) EncodeFrame(pcm []float32, frameSize int) ([]byte, error) {
 			}
 			e.runPrefilter(preemph, frameSize, e.TapsetDecision(), false, tfEstimate, targetBytes, toneFreq, toneishness, maxPitchRatio)
 			if !e.IsHybrid() {
-				e.updateSilenceAnalysisState(nbBands, codedChannels, lm)
+				e.updateSilenceAnalysisState(preemph, mdctPrevL, mdctPrevR, frameSize, overlap, nbBands, codedChannels, lm, upsample)
 			}
 			// The exhausted silence budget selects SPREAD_NORMAL in libopus.
 			e.spreadDecision = spreadNormal
@@ -1835,20 +1835,73 @@ func computeMDCTWithHistoryScratchStereoROverlap(samples, history []float32, sho
 	return coeffs[:frameSize]
 }
 
+// computeSilenceFrameMDCT returns the MDCT coefficients of the current frame for
+// the silence fast path. libopus still runs compute_mdcts() on a silent frame
+// (celt_encoder.c:2090) and feeds the resulting bandLogE to
+// quant_coarse_energy(), so the coarse-energy predictor advances from the real
+// frame energy rather than from a zeroed spectrum. prevL/prevR carry the
+// pre-frame overlap history captured before run_prefilter() ran, exactly as the
+// normal encode path uses them. shortBlocks is 0 whenever the transient flag did
+// not fit the exhausted silence budget, so long blocks are used, like the reference.
+func (e *Encoder) computeSilenceFrameMDCT(preemph, prevL, prevR []float32, frameSize, overlap, codedChannels, upsample int) []float32 {
+	if frameSize <= 0 || len(preemph) == 0 || overlap <= 0 {
+		return nil
+	}
+
+	if e.channels == 1 {
+		hist := ensureFloat32Slice(&e.scratch.leftHist, overlap)[:overlap]
+		copy(hist, prevL[:overlap])
+		mdct := computeMDCTWithHistoryScratchOverlap(preemph, hist, 1, overlap, &e.scratch)
+		applyUpsampleMDCTScaling(mdct, upsample)
+		return mdct
+	}
+
+	left, right := deinterleaveStereoScratchF32(preemph, &e.scratch.deintLeft, &e.scratch.deintRight)
+	leftHist := ensureFloat32Slice(&e.scratch.leftHist, overlap)[:overlap]
+	rightHist := ensureFloat32Slice(&e.scratch.rightHist, overlap)[:overlap]
+	copy(leftHist, prevL[:overlap])
+	copy(rightHist, prevR[:overlap])
+
+	mdctLeft := computeMDCTWithHistoryScratchStereoLOverlap(left, leftHist, 1, overlap, &e.scratch)
+	mdctRight := computeMDCTWithHistoryScratchStereoROverlap(right, rightHist, 1, overlap, &e.scratch)
+	applyUpsampleMDCTScaling(mdctLeft, upsample)
+	applyUpsampleMDCTScaling(mdctRight, upsample)
+
+	coeffs := e.scratch.mdctCoeffsF32
+	if codedChannels == 1 {
+		return foldStereoMDCTToMonoF32(coeffs, mdctLeft, mdctRight)
+	}
+	coeffsLen := len(mdctLeft) + len(mdctRight)
+	if len(coeffs) < coeffsLen {
+		coeffs = make([]float32, coeffsLen)
+		e.scratch.mdctCoeffsF32 = coeffs
+	}
+	coeffs = coeffs[:coeffsLen]
+	copy(coeffs[:len(mdctLeft)], mdctLeft)
+	copy(coeffs[len(mdctLeft):], mdctRight)
+	return coeffs
+}
+
 // updateSilenceAnalysisState advances coarse-energy prediction and temporal VBR
 // on the silence fast path. libopus runs quant_coarse_energy and spectral
 // averaging even after the silence flag exhausts the coding budget.
-func (e *Encoder) updateSilenceAnalysisState(nbBands, codedChannels, lm int) {
+//
+// Those steps consume bandLogE, which libopus derives from the real frame
+// (amp2Log2 over compute_band_energies of the actual MDCT) even when the frame
+// is coded as silence. Substituting a zeroed spectrum here makes loss_distortion
+// saturate at 200 instead of the true value, which pushes delayedIntra past the
+// 2*C*(end-start) intra threshold and flips the recovery frame to intra coding.
+func (e *Encoder) updateSilenceAnalysisState(preemph, prevL, prevR []float32, frameSize, overlap, nbBands, codedChannels, lm, upsample int) {
 	if nbBands <= 0 {
 		return
 	}
 	bandEnd := nbBands
-	silenceFreq := ensureFloat32Slice(&e.scratch.silenceFreqVBR, nbBands*codedChannels)
-	for i := range silenceFreq {
-		silenceFreq[i] = 0
-	}
+
+	// Compute the real frame's band energies, matching libopus celt_encoder.c
+	// compute_band_energies/amp2Log2 on the silent frame.
+	mdctCoeffs := e.computeSilenceFrameMDCT(preemph, prevL, prevR, frameSize, overlap, codedChannels, upsample)
 	silenceE := ensureGLogSlice(&e.scratch.silenceEnergyVBR, nbBands*codedChannels)
-	e.computeBandEnergiesGLogActive(silenceFreq, nbBands, nbBands, codedChannels, 1, silenceE)
+	e.computeBandEnergiesGLogActive(mdctCoeffs, nbBands, frameSize, codedChannels, 1<<lm, silenceE)
 
 	// quant_coarse_energy runs with an exhausted budget on silence, so intra is false
 	// but loss_distortion still advances the predictor used by the next frame.
