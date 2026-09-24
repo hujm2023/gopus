@@ -2533,14 +2533,29 @@ func (e *Encoder) runSilkTransitionPrefill(prefill []opusRes, preserveLP bool, c
 		e.silkVADSide.Reset()
 	}
 
-	if e.channels != 1 {
+	if e.silkInternalChannels() == 2 {
 		e.runSilkStereoTransitionPrefill(prefill, prefillFrameSize, targetRate, silkBitrate)
 		return
 	}
 
 	pcm32 := e.scratchPCM32[:prefillFrameSize]
-	for i := range prefillFrameSize {
-		pcm32[i] = float32(prefill[i])
+	if e.channels == 2 {
+		// libopus branches the prefill on the INTERNAL channel count, not the API
+		// one (silk/enc_API.c:296-340). When the API is stereo but SILK is coded
+		// mono it takes the mono route and first combines L/R
+		// (silk/enc_API.c:313-317):
+		//   sum = samplesIn[2n] + samplesIn[2n+1]; buf[n] = RSHIFT_ROUND(sum, 1);
+		// Values are already in the quantized int16/32768 domain here, matching
+		// quantizeFloat32ToInt16LibopusInPlace below.
+		const invScale = float32(1.0 / 32768.0)
+		for i := range prefillFrameSize {
+			sum := float32ToInt16Libopus(float32(prefill[2*i]) + float32(prefill[2*i+1]))
+			pcm32[i] = float32(silkRShiftRound1(sum)) * invScale
+		}
+	} else {
+		for i := range prefillFrameSize {
+			pcm32[i] = float32(prefill[i])
+		}
 	}
 	quantizeFloat32ToInt16LibopusInPlace(pcm32)
 
