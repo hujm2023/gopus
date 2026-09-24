@@ -864,6 +864,17 @@ func (e *Encoder) FrameCount() int {
 // SetBitrate sets the target bitrate in bits per second.
 // This affects bit allocation for frame encoding.
 func (e *Encoder) SetBitrate(bps int) {
+	// libopus celt_encoder.c:3001-3008 (OPUS_SET_BITRATE_REQUEST) rejects a value
+	// <= 500 that is not OPUS_BITRATE_MAX, leaving st->bitrate untouched. The
+	// hybrid path reaches this ctl with the CELT sub-encoder already parked at
+	// OPUS_BITRATE_MAX (opus_encoder.c:2286) and then requests
+	// bitrate_bps-silk_mode.bitRate (:2454), which can be <= 500. The reference
+	// therefore keeps CELT at OPUS_BITRATE_MAX, so celt_encoder.c:1901 makes
+	// vbr_rate 0 and the whole VBR sizing block (:2435-2533) is skipped.
+	if bps <= 500 && bps != opusBitrateMax {
+		e.targetBitrate = opusBitrateMax
+		return
+	}
 	e.targetBitrate = int32(bps)
 }
 

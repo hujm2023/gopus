@@ -214,8 +214,8 @@ func (e *Encoder) encodeHybridFrameWithMaxPacketAndTransition(pcm []opusRes, cel
 			maxTargetBytes = payloadTargetMain
 		}
 	}
-	if maxTargetBytes > maxHybridPacketSize-1 {
-		maxTargetBytes = maxHybridPacketSize - 1
+	if maxTargetBytes > maxHybridPacketSize {
+		maxTargetBytes = maxHybridPacketSize
 	}
 	if dredBitrate > 0 && e.bitrateMode != ModeCBR && maxPacketBytes == 0 {
 		maxTargetBytes = maxHybridPacketSize - 1
@@ -2014,6 +2014,13 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 func (e *Encoder) computeHybridCELTVBRTargetBytes(limitBytes, frameSize int, tfEstimate opusVal16, totalBoost, tellFrac, tell0Frac, silkOffset int, dredCarrier bool) int {
 	if limitBytes < 2 {
 		return 2
+	}
+	// At the OPUS_BITRATE_MAX sentinel libopus's celt_encode_with_ec skips the
+	// whole VBR sizing block (celt_encoder.c:1901 gates it on
+	// st->bitrate!=OPUS_BITRATE_MAX), so the CELT leg keeps the full budget
+	// instead of shrinking to a rate-derived target.
+	if e.celtEncoder.Bitrate() == BitrateMax {
+		return limitBytes
 	}
 	mode := celt.GetModeConfig(frameSize)
 	lmDiff := max(3-mode.LM, 0)
