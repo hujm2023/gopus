@@ -3932,8 +3932,17 @@ func (e *Encoder) encodeHybridMultiFramePacket(pcm []opusRes, vadPCM []opusRes, 
 	savedBitrate := e.bitrate
 	e.bitrate = int32(subframeBitrate)
 	defer func() { e.silkNonfinalFrame = false }()
+	// libopus treats silk_mode.toMono as a packet-level decision but clears it at
+	// the top of every internal sub-frame (opus_encoder.c:1778) and restores it
+	// after the loop (:1836). gopus resolved toMono once per packet, so the
+	// stereo->mono transition flag set for the packet leaked into later
+	// sub-frames and corrupted the SILK stereo front-end
+	// (silk/stereo_LR_to_MS.c:135).
+	bakToMono := e.toMono
+	defer func() { e.toMono = bakToMono }()
 	for i := range frameCount {
 		e.silkNonfinalFrame = i != frameCount-1
+		e.toMono = 0
 		if i > 0 {
 			e.controlSILKBandwidth(ModeHybrid)
 		}
