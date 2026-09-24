@@ -1603,8 +1603,12 @@ func (e *Encoder) encodeCELTHybridImproved(pcm []opusRes, frameSize int, targetP
 
 	// Mirror libopus effectiveBytes staging for hybrid before transient analysis.
 	// This feeds low-bitrate weak-transient behavior in celt_encoder.c.
+	// celt_encoder.c:1901 gates the VBR staging on `st->vbr && st->bitrate !=
+	// OPUS_BITRATE_MAX`: at the sentinel (the CELT leg stayed at MAX because the
+	// hybrid split rate was rejected, see SetBitrate) libopus takes the else
+	// branch and derives effectiveBytes from the bytes still available.
 	effectiveBytes := 0
-	if e.celtEncoder.VBR() {
+	if e.celtEncoder.VBR() && e.celtEncoder.Bitrate() != BitrateMax {
 		baseBits := e.celtEncoder.BitrateToBits(frameSize)
 		effectiveBytes = baseBits / 8
 	} else {
