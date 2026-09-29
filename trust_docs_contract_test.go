@@ -13,9 +13,13 @@ func TestTrustDocsContract(t *testing.T) {
 	readme := mustReadDocForTest(t, "README.md")
 	for _, needle := range []string{
 		"## Trust And Verification",
-		"Released version: `v0.1.1`.",
-		"`v0.1.0` was retracted",
-		"Latest release evidence:",
+		"## Fork origin and maintenance",
+		"independently maintained fork of [`thesyncim/gopus`]",
+		"bd8db897c2681f6b5e3e5b9d16cf7f9e50f32781",
+		"Fork releases and their evidence:",
+		"https://github.com/hujm2023/gopus/releases",
+		"https://github.com/hujm2023/gopus/actions/workflows/ci.yml",
+		"it does not certify this fork",
 		"Required branch checks:",
 		"[SECURITY.md](SECURITY.md)",
 		"[examples/external-consumer-smoke/smoke_test.go](examples/external-consumer-smoke/smoke_test.go)",
@@ -85,8 +89,9 @@ func TestTrustSensitiveFilesHaveCodeOwners(t *testing.T) {
 func TestReleaseNotesSourceIsReadme(t *testing.T) {
 	readme := mustReadDocForTest(t, "README.md")
 	for _, needle := range []string{
-		"Released version: `v0.1.1`.",
-		"`v0.1.0` was retracted",
+		"Fork releases and their evidence:",
+		"Verify the exact commit SHA",
+		"is not proof of a verified GitHub Release or passing required checks",
 		"make release-evidence",
 	} {
 		if !strings.Contains(readme, needle) {

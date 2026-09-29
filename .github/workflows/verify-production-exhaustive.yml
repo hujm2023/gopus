@@ -52,7 +52,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ffmpeg opus-tools
 
+      - name: Generate native libopus fixtures
+        run: make fixtures-gen-platform
+
       - name: Run exhaustive production verification
+        env:
+          GOPUS_REQUIRE_PLATFORM_FIXTURES: "1"
         run: make verify-production-exhaustive
 
       - name: Generate release evidence bundle

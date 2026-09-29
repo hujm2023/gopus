@@ -160,9 +160,12 @@ type Encoder struct {
 	// (opus_encoder.c:2569), so a packet whose last sub-frame is suppressed has a
 	// final range of 0. It is transient per Encode call.
 	multiFrameLastSubframeDTX bool
-	silkVAD                   *VADState
-	silkVADSide               *VADState
-	fec                       *fecState
+	// silkVAD belongs to SILK channel 0: mono and stereo mid share its history
+	// across mode/channel changes. libopus 1.6.1 silk/enc_API.c:silk_Encode feeds
+	// both through state_Fxx[0].sCmn.sVAD; splitting them changes rate decisions.
+	silkVAD     *VADState
+	silkVADSide *VADState
+	fec         *fecState
 
 	// DTX (Discontinuous Transmission) controls
 	dtxEnabled bool

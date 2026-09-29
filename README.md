@@ -1,12 +1,36 @@
 # gopus
 
-Pure-Go Opus codec — RFC 6716 / RFC 8251, bit-exact and quality parity with
-pinned libopus 1.6.1, a drop-in for the C library with no cgo.
+Pure-Go Opus codec — RFC 6716 / RFC 8251, targeting bit-exact and quality parity
+with pinned libopus 1.6.1, with no cgo.
 
 Encoder, decoder, multistream, projection/ambisonics, Ogg, and RTP RED — all in
 plain Go, with caller-owned, zero-allocation encode and decode hot paths. Codec
-math and bitstream decisions are matched to the pinned reference and proven by a
+math and bitstream decisions are checked against the pinned reference by a
 live C oracle (see [Parity & testing](#parity--testing)).
+
+## Fork origin and maintenance
+
+[`github.com/hujm2023/gopus`](https://github.com/hujm2023/gopus) is an
+independently maintained fork of [`thesyncim/gopus`](https://github.com/thesyncim/gopus).
+The upstream base is
+[`bd8db897c2681f6b5e3e5b9d16cf7f9e50f32781`](https://github.com/thesyncim/gopus/commit/bd8db897c2681f6b5e3e5b9d16cf7f9e50f32781);
+its immediate child, [`55ebdc97`](https://github.com/hujm2023/gopus/commit/55ebdc971105717b15b8ac76f8d5dc04024485ca),
+sets this fork's module path to `github.com/hujm2023/gopus`. Use that path to
+consume this fork. The [BSD 3-Clause license and upstream copyright](LICENSE)
+apply here.
+
+Beyond that base, this fork maintains these additional changes:
+
+| Area | Fork changes and source evidence |
+| --- | --- |
+| SIMD / NSQ performance | CPU-gated SSE4.1 short-term prediction, batched delayed-decision candidate costs, and four-state warped AR feedback. See [dispatch](internal/silk/nsq_pred_amd64.go), [candidate kernel](internal/silk/nsq_quant4.go), and [warped AR checks](internal/silk/nsq_warp_test.go). |
+| Stateful SILK / CELT / Hybrid transitions | Mode-switch prefill, stereo/mono history, shared channel-0 VAD state, redundancy, DTX and VBR state continuity. See [encoder](internal/encoder/encoder.go), [VAD continuity checks](internal/encoder/hybrid_stereo_vad_test.go), and [stateful transition oracle](encode_stateful_transition_fuzz_test.go). |
+| Native rates, multistream and controls | Native-rate Hybrid preprocessing, packet/surround/projection budgets, and bandwidth/frame/channel control alignment. See [native-rate checks](internal/celt/hybrid_native_rate_test.go), [multistream budget checks](multistream/surround_cbr_budget_test.go), and [control alignment](https://github.com/hujm2023/gopus/commit/f6a2335a). |
+| Test and release harness | Cross-platform oracle and fixture checks, PGO profile validation, documentation contracts, and release verification tied to the exact commit SHA. See [CI and releases](.github/CI.md) and [release evidence tooling](tools/gen_release_evidence.sh). |
+
+These links describe implementation and test coverage; passing results belong to
+the tested commit, build tags, architecture and oracle configuration. See
+[Trust And Verification](#trust-and-verification) for this fork's release evidence.
 
 ## Install
 
@@ -296,7 +320,7 @@ darwin/arm64 (a per-arch float budget). amd64/CI is bit-exact; the default arm64
 build is quality-gated for that tail, exactly as libopus's NEON path is relative
 to its own scalar build.
 
-Pre-v1: latest release is `v0.1.1` (see [Trust And Verification](#trust-and-verification)).
+Pre-v1: use this fork's release evidence in [Trust And Verification](#trust-and-verification).
 
 ## Verification
 
@@ -321,11 +345,14 @@ checks (below), and `make release-evidence` must produce a PASS summary.
 
 ## Trust And Verification
 
-Released version: `v0.1.1`.
+Fork releases and their evidence: [hujm2023/gopus Releases](https://github.com/hujm2023/gopus/releases).
+Verify the exact commit SHA against this fork's [CI runs](https://github.com/hujm2023/gopus/actions/workflows/ci.yml)
+and the release's attached evidence. A downloadable Git tag, including `v0.2.0`,
+is not proof of a verified GitHub Release or passing required checks.
 
-`v0.1.0` was retracted: it was tagged but its GitHub Release never published.
-
-Latest release evidence: attached to the [`v0.1.1` release](https://github.com/thesyncim/gopus/releases/tag/v0.1.1).
+The upstream [`v0.1.1` release](https://github.com/thesyncim/gopus/releases/tag/v0.1.1)
+is evidence for upstream code; it does not certify this fork. Release status comes
+from the fork's Releases page and per-commit checks, not an upstream version number.
 
 Required branch checks:
 
