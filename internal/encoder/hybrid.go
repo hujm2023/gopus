@@ -1143,7 +1143,7 @@ func (e *Encoder) applyGainFade(samples []opusRes, g1, g2 opusVal16) []opusRes {
 	if channels == 1 {
 		for i := range overlap {
 			w := opusVal16(window[i*inc])
-			w2 := w * w // Square the window (libopus does this)
+			w2 := opusVal16(w * w) // Preserve the C assignment rounding before 1-w2.
 			g := w2*g2 + (1-w2)*g1
 			samples[i] *= g
 		}
@@ -1154,7 +1154,7 @@ func (e *Encoder) applyGainFade(samples []opusRes, g1, g2 opusVal16) []opusRes {
 	} else {
 		for i := range overlap {
 			w := opusVal16(window[i*inc])
-			w2 := w * w
+			w2 := opusVal16(w * w)
 			g := w2*g2 + (1-w2)*g1
 			samples[i*2] *= g
 			samples[i*2+1] *= g

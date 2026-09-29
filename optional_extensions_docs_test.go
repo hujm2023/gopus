@@ -3,6 +3,7 @@ package gopus_test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -16,7 +17,18 @@ func mustReadDocForTest(t *testing.T, path string) string {
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}
-	return string(data)
+	return strings.ReplaceAll(string(data), "\r\n", "\n")
+}
+
+func TestMustReadDocForTestNormalizesCRLF(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "doc.yml")
+	if err := os.WriteFile(path, []byte("jobs:\r\n  test-linux:\r\n    name: test-linux\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	const want = "jobs:\n  test-linux:\n    name: test-linux\n"
+	if got := mustReadDocForTest(t, path); got != want {
+		t.Fatalf("read document = %q, want %q", got, want)
+	}
 }
 
 func containsDocText(doc, needle string) bool {

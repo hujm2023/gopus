@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/hujm2023/gopus/internal/encoder"
+	"github.com/hujm2023/gopus/internal/libopustooling"
 	"github.com/hujm2023/gopus/internal/testsignal"
 	"github.com/hujm2023/gopus/types"
 )
@@ -786,6 +787,51 @@ type encoderVariantParityMeasurement struct {
 	firstPayloadMismatch int
 }
 
+// encoderVariantReferencePackets honors the scalar oracle selection: the
+// checked-in packets come from default/SIMD libopus and cannot measure scalar
+// encoder parity on rounding-sensitive signals.
+func encoderVariantReferencePackets(c encoderComplianceVariantsFixtureCase, signal []float32) ([][]byte, error) {
+	if !libopustooling.OpusToolScalarRequested() {
+		packets, _, err := decodeEncoderVariantsFixturePackets(c)
+		return packets, err
+	}
+	opusDemo, ok := getFixtureOpusDemoPathForEncoder()
+	if !ok {
+		return nil, fmt.Errorf("scalar libopus opus_demo unavailable")
+	}
+	app, err := modeToOpusDemoApp(c.Mode)
+	if err != nil {
+		return nil, err
+	}
+	bw, err := bandwidthToOpusDemoArg(c.Bandwidth)
+	if err != nil {
+		return nil, err
+	}
+	frame, err := frameSizeSamplesToArg(c.FrameSize)
+	if err != nil {
+		return nil, err
+	}
+	dir, err := os.MkdirTemp("", "gopus-variants-scalar-*")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(dir)
+	inputPath, bitPath := filepath.Join(dir, "in.f32"), filepath.Join(dir, "out.bit")
+	if err := writeFloat32LEFile(inputPath, signal); err != nil {
+		return nil, err
+	}
+	cmd := exec.Command(opusDemo,
+		"-e", app, "48000", strconv.Itoa(c.Channels), strconv.Itoa(c.Bitrate),
+		"-f32", "-cbr", "-complexity", "10", "-bandwidth", bw, "-framesize", frame,
+		inputPath, bitPath,
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("scalar opus_demo encode: %w (%s)", err, out)
+	}
+	packets, _, err := parseOpusDemoEncodeBitstream(bitPath)
+	return packets, err
+}
+
 func measureEncoderVariantParityCase(c encoderComplianceVariantsFixtureCase) (encoderVariantParityMeasurement, error) {
 	totalSamples := c.SignalFrames * c.FrameSize * c.Channels
 	signal, err := testsignal.GenerateEncoderSignalVariant(c.Variant, 48000, totalSamples, c.Channels)
@@ -796,9 +842,9 @@ func measureEncoderVariantParityCase(c encoderComplianceVariantsFixtureCase) (en
 		return encoderVariantParityMeasurement{}, fmt.Errorf("signal hash mismatch")
 	}
 
-	libPackets, _, err := decodeEncoderVariantsFixturePackets(c)
+	libPackets, err := encoderVariantReferencePackets(c, signal)
 	if err != nil {
-		return encoderVariantParityMeasurement{}, fmt.Errorf("decode fixture packets: %w", err)
+		return encoderVariantParityMeasurement{}, fmt.Errorf("load reference packets: %w", err)
 	}
 	goPackets, err := encodeGopusForVariantsCase(c, signal)
 	if err != nil {
@@ -817,12 +863,11 @@ func measureEncoderVariantParityCase(c encoderComplianceVariantsFixtureCase) (en
 	if err != nil {
 		return encoderVariantParityMeasurement{}, fmt.Errorf("compute gopus quality with libopus decode: %w", err)
 	}
-	// Variants fixture lib_q currently comes from the case-level summary fixture,
-	// so measure the variant-specific libopus side live here until the fixture
-	// carries per-variant reference quality.
+	// Measure reference quality from the selected packets: fixture lib_q is a
+	// case-level summary and does not describe each variant or scalar encoding.
 	libRes, err := qualityFromPacketsLibopusReferenceDetailed(libPackets, signal, c.Channels, c.FrameSize)
 	if err != nil {
-		return encoderVariantParityMeasurement{}, fmt.Errorf("compute libopus quality from fixture with libopus decode: %w", err)
+		return encoderVariantParityMeasurement{}, fmt.Errorf("compute reference quality with libopus decode: %w", err)
 	}
 	payloadMismatch, payloadCompared, firstPayloadMismatch := packetPayloadMismatchStats(libPackets, goPackets)
 
