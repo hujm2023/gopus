@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"math"
 	"os/exec"
-	"runtime"
 	"testing"
 
-	"github.com/hujm2023/gopus/internal/celt"
 	"github.com/hujm2023/gopus/internal/libopustest"
 )
 
@@ -34,17 +32,8 @@ func TestHybridGainFadeReferenceRounding(t *testing.T) {
 				samples[i] = .25
 			}
 			got := e.applyHBGainFade(samples, tc.current)
-			want := tc.want
-			if runtime.GOARCH == "arm64" && tc.index < 120/(48000/tc.rate) {
-				// Round the C window assignment before the arm64 fused gain
-				// expression. The live oracle below checks native C contraction.
-				w := celt.GetWindowBufferF32(120)[tc.index*(48000/tc.rate)]
-				w2 := float32(w * w)
-				gain := float32(math.FMA(float64(float32(1-w2)), float64(tc.previous), float64(float32(w2*tc.current))))
-				want = math.Float32bits(.25 * gain)
-			}
-			if bits := math.Float32bits(float32(got[tc.index])); bits != want {
-				t.Fatalf("sample %d bits=%08x want=%08x", tc.index, bits, want)
+			if bits := math.Float32bits(float32(got[tc.index])); bits != tc.want {
+				t.Fatalf("sample %d bits=%08x want=%08x", tc.index, bits, tc.want)
 			}
 		})
 	}
@@ -64,7 +53,7 @@ func TestHybridGainFadeMatchesLibopus(t *testing.T) {
 	}
 	for _, rate := range []int{48000, 24000} {
 		for _, channels := range []int{1, 2} {
-			for _, gains := range [][2]opusVal16{{.9993, .9993}, {1, .5}} {
+			for _, gains := range [][2]opusVal16{{.9993, .9993}, {1, .5}, {.7, .3}, {.25, .9993}} {
 				t.Run(fmt.Sprintf("%dHz/%dch/%g-%g", rate, channels, gains[0], gains[1]), func(t *testing.T) {
 					out, err := exec.Command(bin, fmt.Sprint(rate), fmt.Sprint(channels), fmt.Sprint(gains[0]), fmt.Sprint(gains[1])).Output()
 					if err != nil {

@@ -1142,12 +1142,14 @@ func (e *Encoder) applyGainFade(samples []opusRes, g1, g2 opusVal16) []opusRes {
 	// libopus 1.6.1 src/opus_encoder.c:gain_fade assigns the squared window
 	// before the gain expression. The explicit opusVal16 conversion preserves
 	// that rounding boundary: arm64 must not fuse w*w into the later 1-w2.
-	// Multiplication and addition inside the gain expression may still fuse.
+	// Round the complementary-gain product before adding w2*g2. Native clang
+	// contracts the latter product into the sum; Go arm64 otherwise contracts
+	// the complementary product instead, which changes equal-gain samples.
 	if channels == 1 {
 		for i := range overlap {
 			w := opusVal16(window[i*inc])
 			w2 := opusVal16(w * w) // Preserve the C assignment rounding before 1-w2.
-			g := w2*g2 + (1-w2)*g1
+			g := w2*g2 + opusVal16((1-w2)*g1)
 			samples[i] *= g
 		}
 		// Apply constant g2 for rest of frame
@@ -1158,7 +1160,7 @@ func (e *Encoder) applyGainFade(samples []opusRes, g1, g2 opusVal16) []opusRes {
 		for i := range overlap {
 			w := opusVal16(window[i*inc])
 			w2 := opusVal16(w * w)
-			g := w2*g2 + (1-w2)*g1
+			g := w2*g2 + opusVal16((1-w2)*g1)
 			samples[i*2] *= g
 			samples[i*2+1] *= g
 		}
