@@ -1139,7 +1139,10 @@ func (e *Encoder) applyGainFade(samples []opusRes, g1, g2 opusVal16) []opusRes {
 		return e.applyLinearGainFade(samples, g1, g2, overlap)
 	}
 
-	// Apply windowed gain fade during overlap region
+	// libopus 1.6.1 src/opus_encoder.c:gain_fade assigns the squared window
+	// before the gain expression. The explicit opusVal16 conversion preserves
+	// that rounding boundary: arm64 must not fuse w*w into the later 1-w2.
+	// Multiplication and addition inside the gain expression may still fuse.
 	if channels == 1 {
 		for i := range overlap {
 			w := opusVal16(window[i*inc])

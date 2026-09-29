@@ -17,6 +17,7 @@ func mustReadDocForTest(t *testing.T, path string) string {
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}
+	// Git may check out CRLF on Windows; document contracts use LF boundaries.
 	return strings.ReplaceAll(string(data), "\r\n", "\n")
 }
 
