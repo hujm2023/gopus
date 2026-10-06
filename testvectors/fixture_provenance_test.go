@@ -31,11 +31,20 @@ type libopusFixtureProvenance struct {
 }
 
 func validateLibopusFixtureProvenance(p libopusFixtureProvenance) error {
-	if p.GOOS == "" || p.GOARCH == "" {
-		return fmt.Errorf("missing goos/goarch provenance")
+	if err := validateLibopusFixtureMetadata(p); err != nil {
+		return err
 	}
 	if os.Getenv(requirePlatformFixturesEnv) != "" && (p.GOOS != runtime.GOOS || p.GOARCH != runtime.GOARCH) {
 		return fmt.Errorf("platform provenance=%s/%s want %s/%s", p.GOOS, p.GOARCH, runtime.GOOS, runtime.GOARCH)
+	}
+	return nil
+}
+
+// validateLibopusFixtureMetadata checks archived fixtures independently of the
+// runner platform. Fixtures selected for decoding also require runtime provenance.
+func validateLibopusFixtureMetadata(p libopusFixtureProvenance) error {
+	if p.GOOS == "" || p.GOARCH == "" {
+		return fmt.Errorf("missing goos/goarch provenance")
 	}
 	if p.LibopusVersion != "" && p.LibopusVersion != libopustooling.DefaultVersion {
 		return fmt.Errorf("libopus_version=%q want %q", p.LibopusVersion, libopustooling.DefaultVersion)
@@ -98,18 +107,72 @@ func TestGeneratedLibopusFixturesCarryProvenance(t *testing.T) {
 	}
 	for _, path := range paths {
 		t.Run(filepath.Base(path), func(t *testing.T) {
-			data, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatalf("read fixture: %v", err)
-			}
-			var fixture struct {
-				Provenance libopusFixtureProvenance `json:"provenance"`
-			}
-			if err := json.Unmarshal(data, &fixture); err != nil {
-				t.Fatalf("unmarshal fixture: %v", err)
-			}
-			if err := validateLibopusFixtureProvenance(fixture.Provenance); err != nil {
+			if err := validateLibopusFixtureMetadata(readLibopusFixtureProvenance(t, path)); err != nil {
 				t.Fatalf("invalid provenance: %v", err)
+			}
+		})
+	}
+}
+
+func TestSelectedLibopusFixturesCarryProvenance(t *testing.T) {
+	t.Parallel()
+	requireTestTier(t, testTierFast)
+
+	paths := []string{
+		libopusDecoderMatrixFixturePath,
+		libopusDecoderRateMatrixFixturePath,
+		libopusDecoderLossFixturePath,
+		encoderCompliancePacketsFixturePath,
+		encoderComplianceVariantsFixturePath,
+	}
+	for _, generic := range paths {
+		path := platformFixtureReadPath(generic)
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			if err := validateLibopusFixtureProvenance(readLibopusFixtureProvenance(t, path)); err != nil {
+				t.Fatalf("invalid provenance: %v", err)
+			}
+		})
+	}
+}
+
+func readLibopusFixtureProvenance(t *testing.T, path string) libopusFixtureProvenance {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	var fixture struct {
+		Provenance libopusFixtureProvenance `json:"provenance"`
+	}
+	if err := json.Unmarshal(data, &fixture); err != nil {
+		t.Fatalf("unmarshal fixture: %v", err)
+	}
+	return fixture.Provenance
+}
+
+func TestArchivedLibopusFixtureMetadata(t *testing.T) {
+	t.Setenv(requirePlatformFixturesEnv, "1")
+
+	paths := []string{
+		"testdata/libopus_decoder_matrix_fixture.json",
+		"testdata/libopus_decoder_matrix_fixture_linux_amd64.json",
+	}
+	for _, path := range paths {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			p := readLibopusFixtureProvenance(t, path)
+			if err := validateLibopusFixtureMetadata(p); err != nil {
+				t.Fatalf("valid archived provenance rejected: %v", err)
+			}
+			p.GOOS = "other"
+			if err := validateLibopusFixtureMetadata(p); err != nil {
+				t.Fatalf("foreign archived provenance rejected: %v", err)
+			}
+			if err := validateLibopusFixtureProvenance(p); err == nil {
+				t.Fatal("foreign selected provenance accepted")
+			}
+			p.GOARCH = ""
+			if err := validateLibopusFixtureMetadata(p); err == nil {
+				t.Fatal("incomplete archived provenance accepted")
 			}
 		})
 	}
