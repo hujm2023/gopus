@@ -1,9 +1,6 @@
 name: Verify Production Exhaustive
 
 on:
-  push:
-    branches:
-      - codex/fix-fixture-provenance
   workflow_dispatch:
   schedule:
     # Weekly on Monday at 07:00 UTC.
