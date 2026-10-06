@@ -1,6 +1,9 @@
 name: Verify Safety
 
 on:
+  push:
+    branches:
+      - codex/fix-fixture-provenance
   workflow_dispatch:
   schedule:
     - cron: "0 9 * * 1"
