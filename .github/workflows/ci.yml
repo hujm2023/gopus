@@ -173,13 +173,32 @@ jobs:
         run: make test-fast
 
   vulnerability-scan:
-    name: vulnerability-scan
+    name: vulnerability-scan (${{ matrix.module }})
     needs:
       - changes
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - module: root
+            directory: .
+            cgo: "0"
+          - module: webrtc-control
+            directory: examples/webrtc-control
+            cgo: "0"
+          - module: webrtc-dred-loopback
+            directory: examples/webrtc-dred-loopback
+            cgo: "1"
+          - module: external-consumer-smoke
+            directory: examples/external-consumer-smoke
+            cgo: "0"
     env:
-      CGO_ENABLED: "0"
+      CGO_ENABLED: ${{ matrix.cgo }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.directory }}
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -190,7 +209,31 @@ jobs:
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: stable
+          check-latest: true
+          cache-dependency-path: ${{ matrix.directory }}/go.sum
           cache: true
+
+      - name: Install desktop build dependencies
+        if: matrix.module == 'webrtc-dred-loopback'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1-mesa-dev libwayland-dev libx11-dev libxkbcommon-dev \
+            libxkbcommon-x11-dev libx11-xcb-dev libxcursor-dev libxfixes-dev
+
+      - name: Reject unsupported OpenPGP dependencies
+        run: bash "$GITHUB_WORKSPACE/tools/check_no_openpgp.sh"
+
+      - name: Check optional-feature OpenPGP dependencies
+        if: matrix.module == 'root'
+        run: |
+          bash "$GITHUB_WORKSPACE/tools/check_no_openpgp.sh" -tags purego
+          bash "$GITHUB_WORKSPACE/tools/check_no_openpgp.sh" -tags 'gopus_dred gopus_osce gopus_qext gopus_custom_modes'
+          bash "$GITHUB_WORKSPACE/tools/check_no_openpgp.sh" -tags gopus_fixed_point
+
+      - name: Check desktop optional-feature OpenPGP dependencies
+        if: matrix.module == 'webrtc-dred-loopback'
+        run: bash "$GITHUB_WORKSPACE/tools/check_no_openpgp.sh" -tags 'gopus_dred gopus_osce'
 
       - name: Check reachable Go vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
