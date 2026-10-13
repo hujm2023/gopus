@@ -219,7 +219,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libegl1-mesa-dev libwayland-dev libx11-dev libxkbcommon-dev \
-            libxkbcommon-x11-dev libx11-xcb-dev libxcursor-dev libxfixes-dev
+            libxkbcommon-x11-dev libx11-xcb-dev libxcursor-dev libxfixes-dev libvulkan-dev
 
       - name: Reject unsupported OpenPGP dependencies
         run: bash "$GITHUB_WORKSPACE/tools/check_no_openpgp.sh"
@@ -543,7 +543,12 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.26.x"
+          check-latest: true
+          cache-dependency-path: |
+            go.sum
+            examples/webrtc-control/go.sum
+            examples/webrtc-dred-loopback/go.sum
           cache: true
 
       - name: Run examples smoke gate
