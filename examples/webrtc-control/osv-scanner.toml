@@ -1,0 +1,9 @@
+[[IgnoredVulns]]
+id = "GO-2026-5932"
+reason = """
+Pion DTLS requires golang.org/x/crypto for cryptobyte and ChaCha20-Poly1305.
+The affected openpgp package and its subpackages are absent from
+go list -deps -test ./..., and govulncheck reports no affected imported package
+or reachable symbol. CI runs tools/check_no_openpgp.sh and fails if openpgp
+enters the dependency graph. This exception applies only to GO-2026-5932.
+"""

@@ -9,6 +9,8 @@ uses `malgo` as the OS audio-device bridge.
 
 ## Run
 
+Requires Go 1.26 or newer. The root gopus library requires Go 1.25 or newer.
+
 ```bash
 cd examples/webrtc-dred-loopback
 go run .
