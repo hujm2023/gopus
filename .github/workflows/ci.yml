@@ -19,7 +19,7 @@ env:
   LIBOPUS_VERSION: "1.6.1"
   GOPUS_DISABLE_OPUSDEC: "0"
   GOPUS_DISABLE_OPUSENC: "1"
-  GOLANGCI_LINT_VERSION: "v1.64.8"
+  GOLANGCI_LINT_VERSION: "v2.14.0"
   GOWORK: "off"
 
 concurrency:
@@ -83,12 +83,10 @@ jobs:
         with:
           persist-credentials: false
 
-      # golangci-lint v1.64.8 decodes export data up to version 2, and Go 1.27
-      # emits version 5, so this lane follows the toolchain in go.mod.
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Validate GitHub Actions and release gate
@@ -107,7 +105,7 @@ jobs:
 
       - name: Install golangci-lint
         run: |
-          GOWORK=off go install "github.com/golangci/golangci-lint/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}"
+          GOWORK=off go install "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}"
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Run lint/static analysis
@@ -125,17 +123,15 @@ jobs:
         with:
           persist-credentials: false
 
-      # golangci-lint v1.64.8 decodes export data up to version 2, and Go 1.27
-      # emits version 5, so this lane follows the toolchain in go.mod.
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Install golangci-lint
         run: |
-          GOWORK=off go install "github.com/golangci/golangci-lint/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}"
+          GOWORK=off go install "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}"
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Run lint/static analysis across optional-feature tag builds
@@ -165,6 +161,39 @@ jobs:
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Verify module integrity
+        run: go mod verify
+
+      - name: Build scalar library without cgo
+        run: go build -tags purego ./...
+
+      - name: Run fast package sweep without cgo
+        run: make test-fast
+
+  # The root module declares `go 1.25.0` while every other lane runs a newer Go,
+  # so this lane is what proves the declared minimum still builds and passes.
+  test-linux-min-go:
+    name: test-linux-min-go (go.mod, no cgo)
+    needs:
+      - changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CGO_ENABLED: "0"
+      GOTOOLCHAIN: local
+      GOPUS_LIBOPUS_ORACLE: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
           cache: true
 
       - name: Verify module integrity
@@ -846,6 +875,7 @@ jobs:
       - test-linux-arm64-fixtures
       - vulnerability-scan
       - test-linux-fast
+      - test-linux-min-go
       - test-linux-parity
       - test-linux-race
       - test-linux-provenance
@@ -884,6 +914,7 @@ jobs:
             exit 1
           fi
           echo "test-linux-fast: ${{ needs.test-linux-fast.result }}"
+          echo "test-linux-min-go: ${{ needs.test-linux-min-go.result }}"
           echo "test-linux-parity: ${{ needs.test-linux-parity.result }} (required on push)"
           echo "test-linux-race: ${{ needs.test-linux-race.result }} (required on push)"
           echo "test-linux-provenance: ${{ needs.test-linux-provenance.result }} (required on push)"
@@ -902,6 +933,9 @@ jobs:
           echo "test-linux-core-oracles: ${{ needs.test-linux-core-oracles.result }}"
           echo "test-linux-fixedpoint-parity: ${{ needs.test-linux-fixedpoint-parity.result }}"
           if [ "${{ needs.test-linux-fast.result }}" != "success" ]; then
+            exit 1
+          fi
+          if [ "${{ needs.test-linux-min-go.result }}" != "success" ]; then
             exit 1
           fi
           if [ "${{ github.event_name }}" = "push" ] && [ "${{ needs.test-linux-parity.result }}" != "success" ]; then

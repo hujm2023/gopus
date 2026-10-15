@@ -54,7 +54,7 @@ func TestOptionalExtensionDocsContract(t *testing.T) {
 		{name: "DRED", ext: gopus.OptionalExtensionDRED, status: "Supported under `gopus_dred` (control + standalone)"},
 		{name: "OSCE BWE", ext: gopus.OptionalExtensionOSCEBWE, status: "Supported under `gopus_osce`"},
 	} {
-		wantLine := fmt.Sprintf("| %s | %s | `%s` |", tc.name, tc.status, optionalExtensionDocSymbol(tc.ext))
+		wantLine := fmt.Sprintf("| %s | %s | %#q |", tc.name, tc.status, optionalExtensionDocSymbol(tc.ext))
 		if !containsDocText(optionalDoc, wantLine) {
 			t.Fatalf("README.md missing optional-extension matrix row %q", wantLine)
 		}

@@ -4,7 +4,7 @@
 changes. The release checks retain these stable names:
 
 - `lint-static-analysis`: documentation/type contracts, workflow validation, release-gate fixtures, PGO validation, and lint.
-- `test-linux`: fast no-cgo tests on Go 1.27 and stable; reachable-vulnerability scanning; tag lint; RFC conformance; native ARM64 fixtures; existing codec, optional-feature, consumer and fuzz gates. Pushes also require quality, race, provenance, and repeated parity checks.
+- `test-linux`: fast no-cgo tests on Go 1.27 and stable, plus the `go.mod` minimum; reachable-vulnerability scanning; tag lint; RFC conformance; native ARM64 fixtures; existing codec, optional-feature, consumer and fuzz gates. Pushes also require quality, race, provenance, and repeated parity checks.
 - `perf-linux`, `test-macos`, and `test-windows`: performance and native-platform gates.
 
 The scalar parity lane uses `purego` with `GOPUS_LIBOPUS_REF_SCALAR=1`; native
