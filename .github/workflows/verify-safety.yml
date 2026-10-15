@@ -15,9 +15,10 @@ env:
   GOPUS_DISABLE_OPUSENC: "1"
   GOPUS_SAFETY_FUZZTIME: "10s"
   GOPUS_SAFETY_SOAK_DURATION: "30s"
-  GOPUS_SAFETY_PLATFORMS: "linux/amd64-v1,linux/amd64-v3,macos/arm64,windows/amd64"
-  GOPUS_SAFETY_GO_VERSIONS: "go1.27.x"
 
+# Platform coverage: linux/amd64 (GOAMD64 v1 and v3, through the assembly safety
+# matrix), macos/arm64, and windows/amd64. The Go version comes from the
+# verify-safety-linux matrix, which is the single source of truth.
 jobs:
   verify-safety-linux:
     name: verify-safety-linux (Go ${{ matrix.go-version }})
