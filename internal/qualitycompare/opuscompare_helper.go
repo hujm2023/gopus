@@ -98,19 +98,43 @@ func getOpusCompareHelperPath() (string, error) {
 			return
 		}
 
+		// Every test process whose package reaches this helper builds it, and
+		// `cc -o <shared path>` leaves the destination briefly non-executable, so a
+		// concurrent exec of that path fails with EACCES. Build next to the cache
+		// path and rename it in, which is atomic within a directory.
 		outPath := helperBinaryPath("gopus_libopus_compare_single", runtime.GOOS, runtime.GOARCH)
+		tmp, err := os.CreateTemp(filepath.Dir(outPath), ".gopus_libopus_compare_single-*.tmp")
+		if err != nil {
+			opusCompareHelperPathErr = fmt.Errorf("create opus_compare helper temp file: %w", err)
+			return
+		}
+		tmpPath := tmp.Name()
+		_ = tmp.Close()
+
 		args := []string{
 			"-std=c99",
 			"-O3",
 			"-DNDEBUG",
 			srcPath,
 			"-lm",
-			"-o", outPath,
+			"-o", tmpPath,
 		}
 		cmd := exec.Command(ccPath, args...)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
+			_ = os.Remove(tmpPath)
 			opusCompareHelperPathErr = fmt.Errorf("build opus_compare helper failed: %w (%s)", err, bytes.TrimSpace(output))
+			return
+		}
+		if err := os.Chmod(tmpPath, 0o755); err != nil {
+			_ = os.Remove(tmpPath)
+			opusCompareHelperPathErr = fmt.Errorf("chmod opus_compare helper: %w", err)
+			return
+		}
+		if err := os.Rename(tmpPath, outPath); err != nil {
+			// Windows refuses the replace while another process holds the cached
+			// path open; the uniquely named copy is complete either way.
+			opusCompareHelperPath = tmpPath
 			return
 		}
 
