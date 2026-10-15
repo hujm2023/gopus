@@ -4,7 +4,7 @@
 changes. The release checks retain these stable names:
 
 - `lint-static-analysis`: documentation/type contracts, workflow validation, release-gate fixtures, PGO validation, and lint.
-- `test-linux`: fast no-cgo tests on Go 1.25 and stable; reachable-vulnerability scanning; tag lint; RFC conformance; native ARM64 fixtures; existing codec, optional-feature, consumer and fuzz gates. Pushes also require quality, race, provenance, and repeated parity checks.
+- `test-linux`: fast no-cgo tests on Go 1.27 and stable; reachable-vulnerability scanning; tag lint; RFC conformance; native ARM64 fixtures; existing codec, optional-feature, consumer and fuzz gates. Pushes also require quality, race, provenance, and repeated parity checks.
 - `perf-linux`, `test-macos`, and `test-windows`: performance and native-platform gates.
 
 The scalar parity lane uses `purego` with `GOPUS_LIBOPUS_REF_SCALAR=1`; native
@@ -24,7 +24,7 @@ checks the remote tag still resolves to the verified SHA, and publishes the
 release without checking out or executing repository code.
 
 Actions use full commit SHAs; Dependabot checks their version updates weekly.
-The CI container uses Go 1.26.9 with a pinned multi-architecture image digest;
+The CI container uses Go 1.27.2 with a pinned multi-architecture image digest;
 Dependabot also checks Docker image updates.
 Checkout credentials are not persisted except in the PGO workflow that pushes
 its refresh branch. Pull request jobs have read-only repository contents

@@ -83,6 +83,8 @@ jobs:
         with:
           persist-credentials: false
 
+      # golangci-lint v1.64.8 decodes export data up to version 2, and Go 1.27
+      # emits version 5, so this lane follows the toolchain in go.mod.
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
@@ -123,6 +125,8 @@ jobs:
         with:
           persist-credentials: false
 
+      # golangci-lint v1.64.8 decodes export data up to version 2, and Go 1.27
+      # emits version 5, so this lane follows the toolchain in go.mod.
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
@@ -146,7 +150,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: ["1.25.x", "stable"]
+        go-version: ["1.27.x", "stable"]
     env:
       CGO_ENABLED: "0"
       GOTOOLCHAIN: local
@@ -257,7 +261,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
@@ -297,7 +301,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
@@ -354,7 +358,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
@@ -415,7 +419,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
@@ -447,7 +451,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
@@ -501,7 +505,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Run fuzz smoke gate
@@ -522,7 +526,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Run external-consumer smoke gate
@@ -543,7 +547,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: "1.26.x"
+          go-version: "1.27.x"
           check-latest: true
           cache-dependency-path: |
             go.sum
@@ -569,7 +573,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
@@ -598,7 +602,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Run extra-controls quarantine gate
@@ -619,7 +623,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
@@ -648,7 +652,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned QEXT libopus build
@@ -677,7 +681,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned custom-modes libopus build
@@ -706,7 +710,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
@@ -735,7 +739,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Run extra-controls parity sweep
@@ -760,7 +764,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned scalar libopus build
@@ -789,7 +793,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
@@ -818,7 +822,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned fixed-point libopus build
@@ -967,7 +971,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
@@ -999,7 +1003,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
@@ -1087,7 +1091,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
@@ -1145,7 +1149,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.x"
           cache: true
 
       - name: Cache pinned libopus build
